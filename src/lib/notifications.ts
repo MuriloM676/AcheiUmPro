@@ -83,16 +83,25 @@ function configureWebPush() {
 }
 
 async function insertNotification(userId: number, channel: NotificationChannel, title: string, body: string, metadata?: Record<string, unknown>) {
-  await pool.query(
-    'INSERT INTO notifications (user_id, channel, title, body, metadata) VALUES (?, ?, ?, ?, JSON_OBJECT())',
-    [userId, channel, title, body]
-  )
-
-  if (metadata && Object.keys(metadata).length > 0) {
+  try {
     await pool.query(
-      'UPDATE notifications SET metadata = JSON_MERGE_PATCH(IFNULL(metadata, JSON_OBJECT()), CAST(? AS JSON)) WHERE user_id = ? AND channel = ? AND title = ? ORDER BY id DESC LIMIT 1',
-      [JSON.stringify(metadata), userId, channel, title]
+      'INSERT INTO notifications (user_id, channel, title, body, metadata) VALUES (?, ?, ?, ?, JSON_OBJECT())',
+      [userId, channel, title, body]
     )
+
+    if (metadata && Object.keys(metadata).length > 0) {
+      await pool.query(
+        'UPDATE notifications SET metadata = JSON_MERGE_PATCH(IFNULL(metadata, JSON_OBJECT()), CAST(? AS JSON)) WHERE user_id = ? AND channel = ? AND title = ? ORDER BY id DESC LIMIT 1',
+        [JSON.stringify(metadata), userId, channel, title]
+      )
+    }
+  } catch (err: any) {
+    // If notifications table doesn't exist, skip silently to avoid crashing the app
+    if (err && err.code === 'ER_NO_SUCH_TABLE') {
+      console.warn('Notifications table missing; skipping insertNotification')
+      return
+    }
+    throw err
   }
 }
 
@@ -169,7 +178,11 @@ export async function triggerNotification(options: TriggerOptions) {
 
   await Promise.all(
     channels.map(async (channel) => {
-      await insertNotification(options.userId, channel, options.title, options.body, options.metadata)
+      try {
+        await insertNotification(options.userId, channel, options.title, options.body, options.metadata)
+      } catch (err) {
+        console.error('Failed to insert notification (non-fatal):', err)
+      }
 
       try {
         if (channel === 'email') {
@@ -189,10 +202,18 @@ export async function triggerNotification(options: TriggerOptions) {
 }
 
 export async function registerWebPushSubscription(userId: number, subscription: WebPushSubscription) {
-  await pool.query(
-    `INSERT INTO notification_subscriptions (user_id, endpoint, p256dh, auth)
-     VALUES (?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE p256dh = VALUES(p256dh), auth = VALUES(auth)` ,
-    [userId, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth]
-  )
+  try {
+    await pool.query(
+      `INSERT INTO notification_subscriptions (user_id, endpoint, p256dh, auth)
+       VALUES (?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE p256dh = VALUES(p256dh), auth = VALUES(auth)` ,
+      [userId, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth]
+    )
+  } catch (err: any) {
+    if (err && err.code === 'ER_NO_SUCH_TABLE') {
+      console.warn('notification_subscriptions table missing; skipping registerWebPushSubscription')
+      return
+    }
+    throw err
+  }
 }

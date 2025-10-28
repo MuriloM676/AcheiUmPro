@@ -156,7 +156,63 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 403 });
     }
 
-    const [rows] = await pool.query<RequestRow[]>(query, params);
+    let rows: RequestRow[] = [] as any
+    // Try original query, fallback to a simplified one if anything fails, and never throw to keep endpoint resilient
+    try {
+      const [r] = await pool.query<RequestRow[]>(query, params);
+      rows = r as RequestRow[];
+    } catch (err: any) {
+      console.warn('Requests query failed, attempting fallback:', err?.code || err);
+      try {
+        let fallbackQuery = '';
+        if (user.role === 'client') {
+          fallbackQuery = `
+            SELECT 
+              r.id, r.client_id, r.provider_id, r.service_id, r.status, 
+              r.scheduled_at, r.description, r.created_at,
+              u.name as client_name, u.email as client_email,
+              pu.name as provider_name, pu.phone as provider_phone,
+              s.name as service_name, s.price as service_price,
+              NULL AS last_message,
+              NULL AS last_message_at,
+              NULL AS last_sender_name
+            FROM requests r
+            JOIN users u ON r.client_id = u.id
+            JOIN providers p ON r.provider_id = p.id
+            JOIN users pu ON p.user_id = pu.id
+            LEFT JOIN services s ON r.service_id = s.id
+            WHERE r.client_id = ?
+            ORDER BY r.created_at DESC
+            LIMIT 100
+          `;
+        } else {
+          fallbackQuery = `
+            SELECT 
+              r.id, r.client_id, r.provider_id, r.service_id, r.status, 
+              r.scheduled_at, r.description, r.created_at,
+              u.name as client_name, u.email as client_email,
+              pu.name as provider_name, pu.phone as provider_phone,
+              s.name as service_name, s.price as service_price,
+              NULL AS last_message,
+              NULL AS last_message_at,
+              NULL AS last_sender_name
+            FROM requests r
+            JOIN users u ON r.client_id = u.id
+            JOIN providers p ON r.provider_id = p.id
+            JOIN users pu ON p.user_id = pu.id
+            LEFT JOIN services s ON r.service_id = s.id
+            WHERE r.provider_id = ?
+            ORDER BY r.created_at DESC
+            LIMIT 100
+          `;
+        }
+        const [r2] = await pool.query<RequestRow[]>(fallbackQuery, params);
+        rows = r2 as RequestRow[];
+      } catch (err2: any) {
+        console.error('Fallback requests query failed:', err2);
+        rows = [] as any;
+      }
+    }
 
     return NextResponse.json({ requests: rows });
   } catch (error) {

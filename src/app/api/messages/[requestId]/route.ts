@@ -42,7 +42,7 @@ async function resolveRequestContext(requestId: number) {
   return rows[0]
 }
 
-export async function GET(request: NextRequest, { params }: { params: { requestId: string } }) {
+    export async function GET(request: NextRequest, { params }: { params: Promise<{ requestId: string }> }) {
   try {
     const authHeader = request.headers.get('authorization') || ''
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
@@ -56,7 +56,8 @@ export async function GET(request: NextRequest, { params }: { params: { requestI
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    const requestId = Number(params.requestId)
+    const resolvedParams = await params
+    const requestId = Number(resolvedParams.requestId)
     if (!requestId || Number.isNaN(requestId)) {
       return NextResponse.json({ error: 'Invalid request id' }, { status: 400 })
     }
@@ -73,15 +74,25 @@ export async function GET(request: NextRequest, { params }: { params: { requestI
       return NextResponse.json({ error: 'Not allowed' }, { status: 403 })
     }
 
-    const [messages] = await pool.query<MessageRow[]>(
-      `SELECT m.id, m.request_id, m.sender_id, m.recipient_id, m.content, m.attachment_url, m.attachment_type, m.created_at,
-              u.name AS sender_name
-         FROM messages m
-         JOIN users u ON u.id = m.sender_id
-        WHERE m.request_id = ?
-        ORDER BY m.created_at ASC`,
-      [requestId]
-    )
+    let messages: MessageRow[] = [] as any
+    try {
+      const [mRows] = await pool.query<MessageRow[]>(
+        `SELECT m.id, m.request_id, m.sender_id, m.recipient_id, m.content, m.attachment_url, m.attachment_type, m.created_at,
+                u.name AS sender_name
+           FROM messages m
+           JOIN users u ON u.id = m.sender_id
+          WHERE m.request_id = ?
+          ORDER BY m.created_at ASC`,
+        [requestId]
+      )
+      messages = mRows as MessageRow[]
+    } catch (err: any) {
+      if (err && err.code === 'ER_NO_SUCH_TABLE') {
+        messages = [] as any
+      } else {
+        throw err
+      }
+    }
 
     return NextResponse.json({ messages })
   } catch (error) {
@@ -90,7 +101,7 @@ export async function GET(request: NextRequest, { params }: { params: { requestI
   }
 }
 
-export async function POST(request: NextRequest, { params }: { params: { requestId: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ requestId: string }> }) {
   try {
     const authHeader = request.headers.get('authorization') || ''
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
@@ -104,7 +115,8 @@ export async function POST(request: NextRequest, { params }: { params: { request
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    const requestId = Number(params.requestId)
+    const resolvedParams = await params
+    const requestId = Number(resolvedParams.requestId)
     if (!requestId || Number.isNaN(requestId)) {
       return NextResponse.json({ error: 'Invalid request id' }, { status: 400 })
     }
@@ -132,11 +144,20 @@ export async function POST(request: NextRequest, { params }: { params: { request
 
     const recipientId = isClient ? context.provider_user_id : context.client_id
 
-    const [result] = await pool.query<ResultSetHeader>(
-      `INSERT INTO messages (request_id, sender_id, recipient_id, content, attachment_url, attachment_type)
-       VALUES (?, ?, ?, ?, ?, ?)` ,
-      [requestId, user.id, recipientId, content || null, attachmentUrl, attachmentType]
-    )
+    let result: ResultSetHeader
+    try {
+      const [r] = await pool.query<ResultSetHeader>(
+        `INSERT INTO messages (request_id, sender_id, recipient_id, content, attachment_url, attachment_type)
+         VALUES (?, ?, ?, ?, ?, ?)` ,
+        [requestId, user.id, recipientId, content || null, attachmentUrl, attachmentType]
+      )
+      result = r
+    } catch (err: any) {
+      if (err && err.code === 'ER_NO_SUCH_TABLE') {
+        return NextResponse.json({ error: 'Messaging store not available' }, { status: 503 })
+      }
+      throw err
+    }
 
     const [storedMessages] = await pool.query<MessageRow[]>(
       `SELECT m.id, m.request_id, m.sender_id, m.recipient_id, m.content, m.attachment_url, m.attachment_type, m.created_at,
@@ -154,13 +175,17 @@ export async function POST(request: NextRequest, { params }: { params: { request
     }
 
     if (recipientId !== user.id) {
-      await triggerNotification({
-        userId: recipientId,
-        title: 'Nova mensagem',
-        body: content || 'Você recebeu um novo anexo.',
-        channels: ['in_app', 'webpush'],
-        metadata: { requestId }
-      })
+      try {
+        await triggerNotification({
+          userId: recipientId,
+          title: 'Nova mensagem',
+          body: content || 'Você recebeu um novo anexo.',
+          channels: ['in_app', 'webpush'],
+          metadata: { requestId }
+        })
+      } catch (err) {
+        console.error('Failed to trigger notification for message (non-fatal):', err)
+      }
     }
 
     return NextResponse.json({ message: savedMessage })

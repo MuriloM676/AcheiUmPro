@@ -9,7 +9,7 @@ export const runtime = 'nodejs';
 // PATCH /api/requests/[id] - Update request status (providers only)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authHeader = request.headers.get('authorization') || '';
@@ -35,6 +35,9 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
     }
 
+    const resolvedParams = await params;
+    const requestId = Number(resolvedParams.id);
+
     let providerId: number | null = null;
 
     if (user.role === 'provider') {
@@ -57,8 +60,8 @@ export async function PATCH(
               scheduled_at = COALESCE(?, scheduled_at)
         WHERE id = ? ${providerId ? 'AND provider_id = ?' : ''}`,
       providerId
-        ? [status, scheduled_at || null, params.id, providerId]
-        : [status, scheduled_at || null, params.id]
+        ? [status, scheduled_at || null, requestId, providerId]
+        : [status, scheduled_at || null, requestId]
     );
 
     if (result.affectedRows === 0) {
@@ -74,7 +77,7 @@ export async function PATCH(
          JOIN users pu ON pu.id = p.user_id
         WHERE r.id = ?
         LIMIT 1`,
-      [params.id]
+      [requestId]
     );
 
     const context = contextRows[0];
@@ -94,7 +97,7 @@ export async function PATCH(
         title,
         body: statusMessages[status] || 'Uma solicitação foi atualizada.',
         channels: ['in_app', 'webpush'],
-        metadata: { requestId: Number(params.id) }
+        metadata: { requestId: requestId }
       });
 
       if (status === 'accepted') {
@@ -102,14 +105,14 @@ export async function PATCH(
           `INSERT INTO appointments (request_id, provider_id, client_id, scheduled_for, status)
            VALUES (?, ?, ?, COALESCE(?, NOW()), 'confirmed')
            ON DUPLICATE KEY UPDATE scheduled_for = COALESCE(VALUES(scheduled_for), scheduled_for), status = 'confirmed'`,
-          [params.id, context.provider_id, context.client_id, scheduled_at || null]
+          [requestId, context.provider_id, context.client_id, scheduled_at || null]
         );
       }
 
       if (status === 'completed') {
         await pool.query(
           `UPDATE appointments SET status = 'completed' WHERE request_id = ?`,
-          [params.id]
+          [requestId]
         );
       }
     }
@@ -124,7 +127,7 @@ export async function PATCH(
 // GET /api/requests/[id] - Details for request participants or admin
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authHeader = request.headers.get('authorization') || '';
@@ -139,7 +142,9 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const requestId = Number(params.id);
+    const resolvedParams = await params;
+    const requestId = Number(resolvedParams.id);
+
     if (!requestId || Number.isNaN(requestId)) {
       return NextResponse.json({ error: 'Invalid request id' }, { status: 400 });
     }
