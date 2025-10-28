@@ -378,13 +378,55 @@ export function ProviderProfileClient({ providerId }: ProviderProfileClientProps
             )}
 
             <div>
-              <label className="block text-sm text-white/70 mb-2">Data desejada (opcional)</label>
-              <input
-                type="datetime-local"
-                value={scheduledDate}
-                onChange={(event) => setScheduledDate(event.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2"
-              />
+              <label className="block text-sm text-white/70 mb-2">Horário desejado (opcional)</label>
+              {data.availability && data.availability.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-white/50">Escolha um horário disponível do prestador:</p>
+                  <select
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2"
+                    value={scheduledDate}
+                    onChange={(event) => setScheduledDate(event.target.value)}
+                  >
+                    <option value="">Nenhum horário específico</option>
+                    {(() => {
+                      const weekdayLabels = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
+                      const slots: Array<{ label: string; value: string }> = []
+                      const today = new Date()
+                      for (let dayOffset = 0; dayOffset < 14; dayOffset++) {
+                        const targetDate = new Date(today)
+                        targetDate.setDate(today.getDate() + dayOffset)
+                        const weekday = targetDate.getDay()
+                        const availSlotsForDay = data.availability.filter((s: any) => s.weekday === weekday)
+                        availSlotsForDay.forEach((slot: any) => {
+                          const [startHour, startMin] = slot.start_time.split(':').map(Number)
+                          const [endHour, endMin] = slot.end_time.split(':').map(Number)
+                          const startMinutes = startHour * 60 + startMin
+                          const endMinutes = endHour * 60 + endMin
+                          for (let m = startMinutes; m < endMinutes; m += 30) {
+                            const slotDate = new Date(targetDate)
+                            slotDate.setHours(Math.floor(m / 60), m % 60, 0, 0)
+                            if (slotDate > today) {
+                              const isoValue = slotDate.toISOString()
+                              const label = `${weekdayLabels[weekday]}, ${slotDate.toLocaleDateString('pt-BR')} às ${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`
+                              slots.push({ label, value: isoValue })
+                            }
+                          }
+                        })
+                      }
+                      return slots.slice(0, 50).map((s, i) => (
+                        <option key={i} value={s.value}>{s.label}</option>
+                      ))
+                    })()}
+                  </select>
+                </div>
+              ) : (
+                <input
+                  type="datetime-local"
+                  value={scheduledDate}
+                  onChange={(event) => setScheduledDate(event.target.value)}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2"
+                />
+              )}
             </div>
 
             <div>
