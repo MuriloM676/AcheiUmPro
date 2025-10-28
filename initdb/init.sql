@@ -9,9 +9,10 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(191) NOT NULL UNIQUE,
   phone VARCHAR(50),
   password VARCHAR(191) NOT NULL,
-  role ENUM('client','provider') NOT NULL DEFAULT 'client',
+  role ENUM('client','provider','admin') NOT NULL DEFAULT 'client',
   location VARCHAR(255),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  status ENUM('active', 'suspended') NOT NULL DEFAULT 'active'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Providers extra info
