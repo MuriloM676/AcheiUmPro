@@ -1,124 +1,71 @@
 import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
+import { queryWithRetry } from '@/lib/dbHelpers'
 import { getUserFromToken } from '@/lib/auth'
-import { ResultSetHeader, RowDataPacket } from 'mysql2'
+import { RowDataPacket, ResultSetHeader } from 'mysql2'
 
 export const runtime = 'nodejs'
 
+// GET /api/appointments - list appointments for user
 export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization') || ''
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
-
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const user = await getUserFromToken(token)
-    if (!user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
+    if (!user) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
 
-    let query = ''
-    let params: Array<number> = []
-
-    if (user.role === 'client') {
-      query = `SELECT a.id, a.request_id, a.provider_id, a.client_id, a.scheduled_for, a.status,
-                      pu.name AS provider_name, pu.phone AS provider_phone
-                 FROM appointments a
-                 JOIN providers p ON p.id = a.provider_id
-                 JOIN users pu ON pu.id = p.user_id
-                WHERE a.client_id = ?
-                ORDER BY a.scheduled_for DESC`
-      params = [user.id]
-    } else if (user.role === 'provider') {
-      const [rows] = await pool.query<RowDataPacket[]>(
-        'SELECT id FROM providers WHERE user_id = ? LIMIT 1',
-        [user.id]
-      )
-      if (!rows.length) {
-        return NextResponse.json({ appointments: [] })
-      }
-      const providerId = rows[0].id
-      query = `SELECT a.id, a.request_id, a.provider_id, a.client_id, a.scheduled_for, a.status,
-                      uc.name AS client_name, uc.phone AS client_phone
-                 FROM appointments a
-                 JOIN users uc ON uc.id = a.client_id
-                WHERE a.provider_id = ?
-                ORDER BY a.scheduled_for DESC`
-      params = [providerId]
+    // admins see all
+    let rows: RowDataPacket[] = []
+    if (user.role === 'admin') {
+      const [r] = await queryWithRetry(pool, `SELECT a.*, r.description FROM appointments a JOIN requests r ON r.id = a.request_id ORDER BY a.scheduled_for DESC`)
+      rows = r as RowDataPacket[]
     } else {
-      query = `SELECT a.id, a.request_id, a.provider_id, a.client_id, a.scheduled_for, a.status
-                 FROM appointments a
-                ORDER BY a.scheduled_for DESC
-                LIMIT 200`
+      const [r] = await queryWithRetry(pool, `SELECT a.* FROM appointments a WHERE a.provider_id = ? OR a.client_id = ? ORDER BY a.scheduled_for DESC`, [user.id, user.id])
+      rows = r as RowDataPacket[]
     }
-
-    const [rows] = await pool.query<RowDataPacket[]>(query, params)
 
     return NextResponse.json({ appointments: rows })
-  } catch (error) {
-    console.error('Error fetching appointments:', error)
+  } catch (err) {
+    console.error('Error fetching appointments:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
-export async function PATCH(request: NextRequest) {
+// POST /api/appointments - create or update appointment (client requests scheduling)
+export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization') || ''
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
-
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const user = await getUserFromToken(token)
-    if (!user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
+    if (!user) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
 
     const body = await request.json()
-    const appointmentId = Number(body.id)
-    const status = typeof body.status === 'string' ? body.status : ''
+    const { request_id, scheduled_for } = body
+    if (!request_id) return NextResponse.json({ error: 'request_id required' }, { status: 400 })
 
-    if (!appointmentId || Number.isNaN(appointmentId)) {
-      return NextResponse.json({ error: 'Invalid appointment id' }, { status: 400 })
+    // find the request
+    const [reqRows] = await queryWithRetry(pool, 'SELECT * FROM requests WHERE id = ? LIMIT 1', [request_id])
+    if (!reqRows.length) return NextResponse.json({ error: 'Request not found' }, { status: 404 })
+    const req = reqRows[0]
+
+    // only client or admin can create appointment
+    if (user.role !== 'client' && user.role !== 'admin') {
+      return NextResponse.json({ error: 'Only client or admin can create appointment' }, { status: 403 })
     }
 
-    if (!['pending', 'confirmed', 'completed', 'cancelled'].includes(status)) {
-      return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
-    }
+    // create or update appointment row
+    const [res] = await queryWithRetry(pool, `INSERT INTO appointments (request_id, provider_id, client_id, scheduled_for, status)
+      VALUES (?, ?, ?, ?, 'confirmed')
+      ON DUPLICATE KEY UPDATE scheduled_for = VALUES(scheduled_for), status = VALUES(status)`, [request_id, req.provider_id, req.client_id, scheduled_for || null])
 
-    let conditions = ''
-    const params: Array<string | number> = [status, appointmentId]
-
-    if (user.role === 'provider') {
-      const [rows] = await pool.query<RowDataPacket[]>(
-        'SELECT id FROM providers WHERE user_id = ? LIMIT 1',
-        [user.id]
-      )
-      if (!rows.length) {
-        return NextResponse.json({ error: 'Provider not found' }, { status: 404 })
-      }
-      conditions = ' AND provider_id = ?'
-      params.push(rows[0].id)
-    } else if (user.role === 'client') {
-      conditions = ' AND client_id = ?'
-      params.push(user.id)
-    }
-
-    const [result] = await pool.query<ResultSetHeader>(
-      `UPDATE appointments SET status = ? WHERE id = ?${conditions}`,
-      params
-    )
-
-    if (result.affectedRows === 0) {
-      return NextResponse.json({ error: 'Appointment not found' }, { status: 404 })
-    }
-
-    return NextResponse.json({ ok: true })
-  } catch (error) {
-    console.error('Error updating appointment:', error)
+    return NextResponse.json({ ok: true, appointmentId: (res as RowDataPacket).insertId || null })
+  } catch (err) {
+    console.error('Error creating appointment:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+

@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import pool from './db';
 import { RowDataPacket } from 'mysql2';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import type { JWT } from 'next-auth/jwt'
+import type { Session } from 'next-auth'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change_this_secret';
 const JWT_EXPIRES = '7d';
@@ -33,7 +35,7 @@ export const authOptions = {
 
         try {
           const [rows] = await pool.query<RowDataPacket[]>(
-            'SELECT id, name, email, password, role, status FROM users WHERE email = ?',
+            'SELECT id, name, email, password, role FROM users WHERE email = ?',
             [credentials.email]
           );
 
@@ -65,17 +67,17 @@ export const authOptions = {
     })
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: { token: JWT & { id?: string; role?: string }; user?: any }) {
       if (user) {
-        token.id = user.id;
-        token.role = user.role;
+        (token as any).id = user.id;
+        (token as any).role = user.role;
       }
       return token;
     },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id;
-        session.user.role = token.role;
+    async session({ session, token }: { session: Session & { user?: any }; token: JWT & { id?: string; role?: string } }) {
+      if (session?.user) {
+        (session.user as any).id = token.id;
+        (session.user as any).role = token.role;
       }
       return session;
     }
@@ -84,7 +86,7 @@ export const authOptions = {
     signIn: '/login',
   },
   session: {
-    strategy: 'jwt',
+    strategy: 'jwt' as const,
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET || JWT_SECRET,
@@ -123,7 +125,7 @@ export async function getUserFromToken(token: string): Promise<User | null> {
   const decoded = verifyToken(token);
   if (!decoded) return null;
   const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT id, name, email, role, phone, location, created_at, status
+    `SELECT id, name, email, role, phone, location, created_at
        FROM users
       WHERE id = ?`,
     [decoded.id]

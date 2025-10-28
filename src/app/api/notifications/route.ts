@@ -20,14 +20,25 @@ export async function GET(request: NextRequest) {
 
     const unreadOnly = request.nextUrl.searchParams.get('status') === 'unread'
 
-    const [rows] = await pool.query(
-      `SELECT id, channel, title, body, metadata, read_at, created_at
-         FROM notifications
-        WHERE user_id = ? ${unreadOnly ? 'AND read_at IS NULL' : ''}
-        ORDER BY created_at DESC
-        LIMIT 100`,
-      [user.id]
-    )
+    let rows = []
+    try {
+      const [r] = await pool.query(
+        `SELECT id, channel, title, body, metadata, read_at, created_at
+           FROM notifications
+          WHERE user_id = ? ${unreadOnly ? 'AND read_at IS NULL' : ''}
+          ORDER BY created_at DESC
+          LIMIT 100`,
+        [user.id]
+      )
+      rows = r
+    } catch (err: any) {
+      // If the notifications table doesn't exist, return empty list
+      if (err && err.code === 'ER_NO_SUCH_TABLE') {
+        rows = []
+      } else {
+        throw err
+      }
+    }
 
     return NextResponse.json({ notifications: rows })
   } catch (error) {

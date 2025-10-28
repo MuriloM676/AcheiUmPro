@@ -19,16 +19,12 @@ export const authOptions = {
 
         try {
           const [rows] = await pool.query<RowDataPacket[]>(
-            'SELECT id, name, email, password, role, status FROM users WHERE email = ?',
+            'SELECT id, name, email, password, role FROM users WHERE email = ?',
             [credentials.email]
           );
 
           const user = rows[0];
           if (!user) {
-            return null;
-          }
-
-          if (user.status && user.status !== 'active') {
             return null;
           }
 
@@ -51,15 +47,15 @@ export const authOptions = {
     })
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: any) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
       }
       return token;
     },
-    async session({ session, token }) {
-      if (session.user) {
+    async session({ session, token }: any) {
+      if (session?.user) {
         session.user.id = token.id;
         session.user.role = token.role;
       }
@@ -70,7 +66,7 @@ export const authOptions = {
     signIn: '/login',
   },
   session: {
-    strategy: 'jwt',
+    strategy: 'jwt' as const,
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET || 'change_this_secret',
