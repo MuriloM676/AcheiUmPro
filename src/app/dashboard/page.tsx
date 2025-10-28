@@ -1,464 +1,411 @@
-'use client';import { Button } from '@/components/Button'
-
-import { useState } from 'react'
-
-import { useEffect, useState } from 'react';import { useQuery } from 'react-query'
-
-import { useRouter } from 'next/navigation';import axios from 'axios'
-
-
-
-interface Request {interface Request {
-
-  id: number;  id: string
-
-  client_id: number;  clientName: string
-
-  provider_id: number;  service: string
-
-  service_id: number | null;  status: 'pending' | 'accepted' | 'rejected' | 'completed'
-
-  status: 'pending' | 'accepted' | 'rejected' | 'completed';  createdAt: string
-
-  scheduled_at: string | null;  description: string
-
-  description: string | null;}
-
-  created_at: string;
-
-  client_name: string;export default function DashboardPage() {
-
-  client_email: string;  const [activeTab, setActiveTab] = useState<'requests' | 'profile' | 'reviews'>('requests')
-
-  provider_name: string;
-
-  provider_phone: string | null;  const { data: requests, isLoading } = useQuery('requests', async () => {
-
-  service_name: string | null;    const { data } = await axios.get<Request[]>('/api/provider/requests')
-
-  service_price: string | null;    return data
-
-}  })
-
-
-
-interface UserProfile {  const updateRequestStatus = async (requestId: string, status: Request['status']) => {
-
-  id: number;    try {
-
-  email: string;      await axios.patch(`/api/provider/requests/${requestId}`, { status })
-
-  name: string;      // Revalidate requests
-
-  role: 'client' | 'provider';    } catch (error) {
-
-  created_at: string;      console.error('Error updating request status:', error)
-
-  provider_id?: number;    }
-
-  location?: string;  }
-
-  phone?: string;
-
-  description?: string;  return (
-
-  photo_url?: string;    <div className="min-h-screen bg-gray-50">
-
-}      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-
-export default function DashboardPage() {          <div className="border-b border-gray-200">
-
-  const router = useRouter();            <nav className="-mb-px flex">
-
-  const [profile, setProfile] = useState<UserProfile | null>(null);              {(['requests', 'profile', 'reviews'] as const).map((tab) => (
-
-  const [requests, setRequests] = useState<Request[]>([]);                <button
-
-  const [loading, setLoading] = useState(true);                  key={tab}
-
-  const [error, setError] = useState('');                  onClick={() => setActiveTab(tab)}
-
-                  className={`
-
-  useEffect(() => {                    py-4 px-6 text-center border-b-2 font-medium text-sm
-
-    // Load profile and requests                    ${
-
-    const loadData = async () => {                      activeTab === tab
-
-      try {                        ? 'border-blue-500 text-blue-600'
-
-        setLoading(true);                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-
-                            }
-
-        // Get JWT token from localStorage (assuming login stores it there)                  `}
-
-        const token = localStorage.getItem('token');                >
-
-        if (!token) {                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
-
-          router.push('/login');                </button>
-
-          return;              ))}
-
-        }            </nav>
-
-          </div>
-
-        // Fetch profile
-
-        const profileRes = await fetch('/api/profile', {          <div className="p-6">
-
-          headers: { Authorization: `Bearer ${token}` }            {activeTab === 'requests' && (
-
-        });              <div className="space-y-6">
-
-                        {isLoading ? (
-
-        if (!profileRes.ok) {                  <div className="text-center py-12">
-
-          if (profileRes.status === 401) {                    <div className="w-12 h-12 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin mx-auto"></div>
-
-            router.push('/login');                  </div>
-
-            return;                ) : (
-
-          }                  requests?.map((request) => (
-
-          throw new Error('Failed to load profile');                    <div
-
-        }                      key={request.id}
-
-        const profileData = await profileRes.json();                      className="bg-white border rounded-lg p-4 shadow-sm"
-
-        setProfile(profileData.profile);                    >
-
-                      <div className="flex justify-between items-start">
-
-        // Fetch requests                        <div>
-
-        const requestsRes = await fetch('/api/requests', {                          <h3 className="text-lg font-semibold">
-
-          headers: { Authorization: `Bearer ${token}` }                            {request.clientName}
-
-        });                          </h3>
-
-                                  <p className="text-gray-600">{request.service}</p>
-
-        if (!requestsRes.ok) throw new Error('Failed to load requests');                          <p className="text-sm text-gray-500 mt-1">
-
-        const requestsData = await requestsRes.json();                            {new Date(request.createdAt).toLocaleDateString()}
-
-        setRequests(requestsData.requests || []);                          </p>
-
-      } catch (err: any) {                          <p className="text-gray-700 mt-2">
-
-        setError(err.message || 'Failed to load data');                            {request.description}
-
-      } finally {                          </p>
-
-        setLoading(false);                        </div>
-
-      }                        <div className="flex items-center space-x-2">
-
-    };                          {request.status === 'pending' && (
-
-                            <>
-
-    loadData();                              <Button
-
-  }, [router]);                                variant="primary"
-
-                                onClick={() =>
-
-  const handleStatusUpdate = async (requestId: number, newStatus: string) => {                                  updateRequestStatus(request.id, 'accepted')
-
-    try {                                }
-
-      const token = localStorage.getItem('token');                              >
-
-      const res = await fetch(`/api/requests/${requestId}`, {                                Aceitar
-
-        method: 'PATCH',                              </Button>
-
-        headers: {                              <Button
-
-          'Content-Type': 'application/json',                                variant="outline"
-
-          Authorization: `Bearer ${token}`                                onClick={() =>
-
-        },                                  updateRequestStatus(request.id, 'rejected')
-
-        body: JSON.stringify({ status: newStatus })                                }
-
-      });                              >
-
-                                Recusar
-
-      if (!res.ok) throw new Error('Failed to update request');                              </Button>
-
-                            </>
-
-      // Update local state                          )}
-
-      setRequests(requests.map(req =>                           {request.status === 'accepted' && (
-
-        req.id === requestId ? { ...req, status: newStatus as any } : req                            <Button
-
-      ));                              variant="primary"
-
-    } catch (err: any) {                              onClick={() =>
-
-      alert(err.message || 'Failed to update request');                                updateRequestStatus(request.id, 'completed')
-
-    }                              }
-
-  };                            >
-
-                              Concluir
-
-  if (loading) {                            </Button>
-
-    return (                          )}
-
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">                        </div>
-
-        <div className="text-center">                      </div>
-
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>                      <div className="mt-2">
-
-          <p className="text-white">Carregando dashboard...</p>                        <span
-
-        </div>                          className={`
-
-      </div>                            inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-
-    );                            ${
-
-  }                              request.status === 'pending'
-
-                                ? 'bg-yellow-100 text-yellow-800'
-
-  if (error) {                                : request.status === 'accepted'
-
-    return (                                ? 'bg-green-100 text-green-800'
-
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">                                : request.status === 'rejected'
-
-        <div className="bg-red-900/20 border border-red-500 rounded-lg p-6 max-w-md">                                ? 'bg-red-100 text-red-800'
-
-          <p className="text-red-400">{error}</p>                                : 'bg-gray-100 text-gray-800'
-
-          <button                            }
-
-            onClick={() => router.push('/login')}                          `}
-
-            className="mt-4 text-blue-400 hover:text-blue-300 underline"                        >
-
-          >                          {request.status.charAt(0).toUpperCase() +
-
-            Fazer login novamente                            request.status.slice(1)}
-
-          </button>                        </span>
-
-        </div>                      </div>
-
-      </div>                    </div>
-
-    );                  ))
-
-  }                )}
-
-              </div>
-
-  if (!profile) return null;            )}
-
-
-
-  const getStatusColor = (status: string) => {            {activeTab === 'profile' && (
-
-    switch (status) {              <div>
-
-      case 'pending': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50';                <h2 className="text-2xl font-semibold mb-6">Perfil</h2>
-
-      case 'accepted': return 'bg-green-500/20 text-green-400 border-green-500/50';                {/* Add profile editing form here */}
-
-      case 'rejected': return 'bg-red-500/20 text-red-400 border-red-500/50';              </div>
-
-      case 'completed': return 'bg-blue-500/20 text-blue-400 border-blue-500/50';            )}
-
-      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/50';
-
-    }            {activeTab === 'reviews' && (
-
-  };              <div>
-
-                <h2 className="text-2xl font-semibold mb-6">Avaliações</h2>
-
-  const getStatusLabel = (status: string) => {                {/* Add reviews list here */}
-
-    switch (status) {              </div>
-
-      case 'pending': return 'Pendente';            )}
-
-      case 'accepted': return 'Aceito';          </div>
-
-      case 'rejected': return 'Rejeitado';        </div>
-
-      case 'completed': return 'Concluído';      </div>
-
-      default: return status;    </div>
-
-    }  )
-
-  };}
+﻿'use client'
+
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import axios from 'axios'
+import { toast } from 'react-toastify'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/Button'
+import { useAuth } from '@/hooks/useAuth'
+import { AuthGuard } from '@/components/AuthGuard'
+
+type RequestStatus = 'pending' | 'accepted' | 'rejected' | 'completed'
+
+interface RequestItem {
+  id: number
+  client_id: number
+  provider_id: number
+  service_id: number | null
+  status: RequestStatus
+  scheduled_at: string | null
+  description: string | null
+  created_at: string
+  client_name: string
+  client_email: string
+  provider_name: string
+  provider_phone: string | null
+  service_name: string | null
+  service_price: string | null
+}
+
+const statusLabels: Record<RequestStatus, string> = {
+  pending: 'Pendente',
+  accepted: 'Aceita',
+  rejected: 'Recusada',
+  completed: 'Concluída'
+}
+
+const statusColors: Record<RequestStatus, string> = {
+  pending: 'bg-yellow-500/20 text-yellow-300',
+  accepted: 'bg-blue-500/20 text-blue-300',
+  rejected: 'bg-red-500/20 text-red-300',
+  completed: 'bg-green-500/20 text-green-300'
+}
+
+function DashboardContent() {
+  const { user, token, logout } = useAuth({ requireAuth: true })
+  const router = useRouter()
+  const [requests, setRequests] = useState<RequestItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [statusFilter, setStatusFilter] = useState<RequestStatus | 'all'>('all')
+  const [reviewModalOpen, setReviewModalOpen] = useState(false)
+  const [reviewRating, setReviewRating] = useState(5)
+  const [reviewComment, setReviewComment] = useState('')
+  const [savingReview, setSavingReview] = useState(false)
+  const [selectedRequest, setSelectedRequest] = useState<RequestItem | null>(null)
+
+  const isProvider = user?.role === 'provider'
+
+  const filteredRequests = useMemo(() => {
+    if (statusFilter === 'all') return requests
+    return requests.filter((request) => request.status === statusFilter)
+  }, [requests, statusFilter])
+
+  const loadRequests = useCallback(async () => {
+    if (!token) return
+
+    try {
+      setLoading(true)
+      const { data } = await axios.get('/api/requests', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      setRequests(data.requests || [])
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        toast.error('Sessão expirada, faça login novamente.')
+        router.replace('/login')
+      } else {
+        toast.error(error.response?.data?.error || 'Erro ao carregar solicitações')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [router, token])
+
+  useEffect(() => {
+    loadRequests()
+  }, [loadRequests])
+
+  const handleUpdateStatus = async (requestId: number, status: RequestStatus) => {
+    try {
+      await axios.patch(`/api/requests/${requestId}`, { status }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      toast.success('Solicitação atualizada com sucesso')
+      loadRequests()
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Erro ao atualizar solicitação')
+    }
+  }
+
+  const handleOpenReviewModal = async (request: RequestItem) => {
+    if (!user) return
+    setSelectedRequest(request)
+    setReviewRating(5)
+    setReviewComment('')
+    setReviewModalOpen(true)
+
+    try {
+      const headers = token ? { Authorization: `Bearer ${token}` } : undefined
+      const { data } = await axios.get('/api/reviews', {
+        params: { providerId: request.provider_id, clientId: user.id },
+        headers
+      })
+
+      if (data.reviews && data.reviews.length > 0) {
+        setReviewRating(data.reviews[0].rating)
+        setReviewComment(data.reviews[0].comment || '')
+      }
+    } catch (error) {
+      // silently ignore if fetching reviews fails
+    }
+  }
+
+  const handleSubmitReview = async () => {
+    if (!selectedRequest) return
+    if (!token) {
+      toast.error('Sessão expirada, faça login novamente.')
+      router.replace('/login')
+      return
+    }
+
+    try {
+      setSavingReview(true)
+      await axios.post('/api/reviews', {
+        provider_id: selectedRequest.provider_id,
+        rating: reviewRating,
+        comment: reviewComment
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      toast.success('Avaliação salva com sucesso!')
+      setReviewModalOpen(false)
+      setSelectedRequest(null)
+      loadRequests()
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Erro ao salvar avaliação')
+    } finally {
+      setSavingReview(false)
+    }
+  }
+
+  if (!user) {
+    return null
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-          <p className="text-gray-400">Bem-vindo, {profile.name}!</p>
-          <p className="text-sm text-gray-500">
-            {profile.role === 'client' ? 'Cliente' : 'Prestador de Serviços'}
-          </p>
+      <nav className="bg-white/10 backdrop-blur-lg border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">AcheiUmPro</h1>
+            <p className="text-xs text-gray-300">{isProvider ? 'Painel do prestador' : 'Painel do cliente'}</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-gray-200">Olá, {user.name || user.email}</span>
+            <Button variant="secondary" onClick={logout}>
+              Sair
+            </Button>
+          </div>
         </div>
+      </nav>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <button
-            onClick={() => router.push('/search')}
-            className="bg-white/10 hover:bg-white/20 rounded-lg p-6 text-left transition-all border border-white/20"
-          >
-            <div className="text-2xl mb-2">🔍</div>
-            <h3 className="font-semibold mb-1">Buscar Profissionais</h3>
-            <p className="text-sm text-gray-400">Encontre prestadores de serviços</p>
-          </button>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white/10 border border-white/10 rounded-xl p-6">
+            <p className="text-sm text-gray-300 mb-2">Total de solicitações</p>
+            <p className="text-4xl font-bold">{requests.length}</p>
+          </div>
+          <div className="bg-white/10 border border-white/10 rounded-xl p-6">
+            <p className="text-sm text-gray-300 mb-2">Pendentes</p>
+            <p className="text-4xl font-bold">{requests.filter((r) => r.status === 'pending').length}</p>
+          </div>
+          <div className="bg-white/10 border border-white/10 rounded-xl p-6">
+            <p className="text-sm text-gray-300 mb-2">Concluídas</p>
+            <p className="text-4xl font-bold">{requests.filter((r) => r.status === 'completed').length}</p>
+          </div>
+        </section>
 
-          {profile.role === 'provider' && (
-            <button
-              className="bg-white/10 hover:bg-white/20 rounded-lg p-6 text-left transition-all border border-white/20"
-            >
-              <div className="text-2xl mb-2">⚙️</div>
-              <h3 className="font-semibold mb-1">Gerenciar Serviços</h3>
-              <p className="text-sm text-gray-400">Edite seus serviços oferecidos</p>
-            </button>
-          )}
+        <section className="bg-white/10 border border-white/10 rounded-xl p-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-2xl font-semibold">Solicitações recentes</h2>
+              <p className="text-gray-300 text-sm">
+                {isProvider
+                  ? 'Gerencie as solicitações recebidas dos clientes.'
+                  : 'Acompanhe o andamento dos seus pedidos.'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-300">Filtrar por status:</label>
+              <select
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value as RequestStatus | 'all')}
+                className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm"
+              >
+                <option value="all">Todos</option>
+                <option value="pending">Pendentes</option>
+                <option value="accepted">Aceitas</option>
+                <option value="completed">Concluídas</option>
+                <option value="rejected">Recusadas</option>
+              </select>
+            </div>
+          </div>
 
-          <button
-            onClick={() => router.push('/')}
-            className="bg-white/10 hover:bg-white/20 rounded-lg p-6 text-left transition-all border border-white/20"
-          >
-            <div className="text-2xl mb-2">🏠</div>
-            <h3 className="font-semibold mb-1">Página Inicial</h3>
-            <p className="text-sm text-gray-400">Voltar para home</p>
-          </button>
-        </div>
-
-        {/* Requests Section */}
-        <div className="bg-white/5 rounded-lg border border-white/10 p-6">
-          <h2 className="text-2xl font-bold mb-6">
-            {profile.role === 'client' ? 'Minhas Solicitações' : 'Solicitações Recebidas'}
-          </h2>
-
-          {requests.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">📭</div>
-              <p className="text-gray-400 mb-2">Nenhuma solicitação ainda</p>
-              {profile.role === 'client' && (
-                <button
-                  onClick={() => router.push('/search')}
-                  className="text-blue-400 hover:text-blue-300 underline"
-                >
-                  Buscar profissionais agora
-                </button>
-              )}
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500" />
+            </div>
+          ) : filteredRequests.length === 0 ? (
+            <div className="text-center py-12 text-gray-300">
+              Nenhuma solicitação encontrada.
             </div>
           ) : (
             <div className="space-y-4">
-              {requests.map((request) => (
+              {filteredRequests.map((request) => (
                 <div
                   key={request.id}
-                  className="bg-gray-800/50 rounded-lg p-6 border border-gray-700 hover:border-gray-600 transition-colors"
+                  className="bg-white/5 border border-white/10 rounded-lg p-6 hover:border-white/20 transition-all"
                 >
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="font-semibold text-lg">
-                        {profile.role === 'client' 
-                          ? `Solicitação para ${request.provider_name}`
-                          : `Solicitação de ${request.client_name}`
-                        }
-                      </h3>
-                      {request.service_name && (
-                        <p className="text-blue-400 text-sm">
-                          Serviço: {request.service_name}
-                          {request.service_price && ` - R$ ${request.service_price}`}
+                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide ${statusColors[request.status]}`}>
+                          {statusLabels[request.status]}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          Criada em {new Date(request.created_at).toLocaleString('pt-BR')}
+                        </span>
+                      </div>
+                      <p className="text-lg font-semibold">
+                        {request.service_name || 'Serviço sem categoria definida'}
+                      </p>
+                      {request.description && (
+                        <p className="text-sm text-gray-300 max-w-2xl">
+                          {request.description}
+                        </p>
+                      )}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-400">
+                        {isProvider ? (
+                          <>
+                            <p>Cliente: <span className="text-white">{request.client_name}</span></p>
+                            <p>Email: {request.client_email}</p>
+                          </>
+                        ) : (
+                          <>
+                            <p>Prestador: <span className="text-white">{request.provider_name}</span></p>
+                            {request.provider_phone && <p>Contato: {request.provider_phone}</p>}
+                          </>
+                        )}
+                        {request.scheduled_at && (
+                          <p>Data agendada: {new Date(request.scheduled_at).toLocaleString('pt-BR')}</p>
+                        )}
+                        {request.service_price && (
+                          <p>Valor estimado: R$ {Number(request.service_price).toFixed(2)}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 min-w-[220px]">
+                      {isProvider ? (
+                        <>
+                          {request.status === 'pending' && (
+                            <>
+                              <Button onClick={() => handleUpdateStatus(request.id, 'accepted')}>
+                                Aceitar solicitação
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                onClick={() => handleUpdateStatus(request.id, 'rejected')}
+                              >
+                                Recusar
+                              </Button>
+                            </>
+                          )}
+                          {request.status === 'accepted' && (
+                            <Button onClick={() => handleUpdateStatus(request.id, 'completed')}>
+                              Marcar como concluída
+                            </Button>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          {request.status === 'completed' && (
+                            <Button onClick={() => handleOpenReviewModal(request)}>
+                              Avaliar prestador
+                            </Button>
+                          )}
+                        </>
+                      )}
+                      {!isProvider && request.status === 'accepted' && (
+                        <p className="text-xs text-gray-400">
+                          Serviço em andamento. Aguarde o prestador concluir para avaliar.
                         </p>
                       )}
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-xs border ${getStatusColor(request.status)}`}>
-                      {getStatusLabel(request.status)}
-                    </span>
                   </div>
-
-                  {request.description && (
-                    <p className="text-gray-300 mb-3">{request.description}</p>
-                  )}
-
-                  <div className="flex flex-wrap gap-4 text-sm text-gray-400 mb-4">
-                    {request.scheduled_at && (
-                      <span>📅 {new Date(request.scheduled_at).toLocaleString('pt-BR')}</span>
-                    )}
-                    <span>🕐 {new Date(request.created_at).toLocaleDateString('pt-BR')}</span>
-                    {profile.role === 'client' && request.provider_phone && (
-                      <a 
-                        href={`tel:${request.provider_phone}`}
-                        className="text-blue-400 hover:text-blue-300"
-                      >
-                        📞 {request.provider_phone}
-                      </a>
-                    )}
-                    {profile.role === 'provider' && (
-                      <span>✉️ {request.client_email}</span>
-                    )}
-                  </div>
-
-                  {/* Provider actions */}
-                  {profile.role === 'provider' && request.status === 'pending' && (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleStatusUpdate(request.id, 'accepted')}
-                        className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                      >
-                        ✓ Aceitar
-                      </button>
-                      <button
-                        onClick={() => handleStatusUpdate(request.id, 'rejected')}
-                        className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                      >
-                        ✗ Rejeitar
-                      </button>
-                    </div>
-                  )}
-
-                  {profile.role === 'provider' && request.status === 'accepted' && (
-                    <button
-                      onClick={() => handleStatusUpdate(request.id, 'completed')}
-                      className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                    >
-                      ✓ Marcar como Concluído
-                    </button>
-                  )}
                 </div>
               ))}
             </div>
           )}
+        </section>
+
+        {!isProvider && (
+          <section className="bg-white/10 border border-white/10 rounded-xl p-6">
+            <h3 className="text-lg font-semibold mb-3">Precisa de um novo serviço?</h3>
+            <p className="text-gray-300 text-sm mb-4">
+              Explore profissionais disponíveis e envie novas solicitações conforme necessário.
+            </p>
+            <Button onClick={() => router.push('/search')}>Buscar profissionais</Button>
+          </section>
+        )}
+      </main>
+
+      {reviewModalOpen && selectedRequest && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+          <div className="bg-gray-900 border border-white/10 rounded-xl max-w-md w-full p-6 space-y-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h4 className="text-xl font-semibold">Avaliar {selectedRequest.provider_name}</h4>
+                <p className="text-sm text-gray-400">
+                  Conte como foi a experiência, isso ajuda outros clientes.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setReviewModalOpen(false)
+                  setSelectedRequest(null)
+                }}
+                className="text-gray-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-300 mb-2">Nota (1 a 5)</label>
+              <div className="flex gap-3">
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setReviewRating(value)}
+                    className={`w-10 h-10 rounded-full border transition-colors ${
+                      reviewRating >= value
+                        ? 'bg-yellow-400 text-black border-yellow-300'
+                        : 'border-gray-600 text-gray-300'
+                    }`}
+                  >
+                    {value}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-300 mb-2">
+                Comentário (opcional)
+              </label>
+              <textarea
+                rows={4}
+                value={reviewComment}
+                onChange={(event) => setReviewComment(event.target.value)}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Descreva os pontos positivos ou o que pode melhorar..."
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setReviewModalOpen(false)
+                  setSelectedRequest(null)
+                }}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSubmitReview}
+                isLoading={savingReview}
+                className="flex-1"
+              >
+                Salvar avaliação
+              </Button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
-  );
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <AuthGuard>
+      <DashboardContent />
+    </AuthGuard>
+  )
 }

@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     const { service, q } = value;
     try {
       let sql = `SELECT p.id as provider_id, u.id as user_id, u.name, u.email, u.phone, u.location, p.description, p.photo_url,
-        IFNULL(AVG(r.rating),0) as avg_rating
+        IFNULL(AVG(r.rating),0) as avg_rating, COUNT(r.id) as reviews_count
         FROM providers p
         JOIN users u ON u.id = p.user_id
         LEFT JOIN reviews r ON r.provider_id = p.id`;
@@ -38,7 +38,12 @@ export default async function handler(req, res) {
         });
       }
 
-      const result = rows.map(r => ({ ...r, services: servicesMap[r.provider_id] || [] }));
+      const result = rows.map(r => ({
+        ...r,
+        avg_rating: Number(r.avg_rating || 0),
+        reviews_count: Number(r.reviews_count || 0),
+        services: servicesMap[r.provider_id] || []
+      }));
       return res.json({ providers: result });
     } catch (err) {
       console.error(err);

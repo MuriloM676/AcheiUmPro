@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import Link from 'next/link'
 import axios from 'axios'
+import { toast } from 'react-toastify'
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -32,19 +33,23 @@ export default function LoginPage() {
     try {
       setError('')
       const response = await axios.post('/api/auth/login', data)
-      
+
       if (response.data.token) {
-        // Store token in localStorage
+        // Store token and user data
         localStorage.setItem('token', response.data.token)
         localStorage.setItem('user', JSON.stringify(response.data.user))
-        
-        // Redirect to dashboard
-        router.push('/dashboard')
+
+        // Force redirect using window.location for immediate effect
+        toast.success('Login realizado com sucesso!')
+        window.location.href = '/dashboard'
       } else {
         setError('Resposta inválida do servidor')
+        toast.error('Resposta inválida do servidor')
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Credenciais inválidas')
+      const message = err.response?.data?.error || 'Credenciais inválidas'
+      setError(message)
+      toast.error(message)
     }
   }
 

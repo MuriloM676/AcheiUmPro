@@ -3,6 +3,8 @@ import pool from '@/lib/db';
 import { getUserFromToken } from '@/lib/auth';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 
+export const runtime = 'nodejs';
+
 // PATCH /api/requests/[id] - Update request status (providers only)
 export async function PATCH(
   request: NextRequest,

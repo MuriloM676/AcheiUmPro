@@ -9,6 +9,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import axios from 'axios'
+import { toast } from 'react-toastify'
 
 const registerSchema = z.object({
   name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
@@ -36,10 +37,15 @@ export default function RegisterPage() {
 
   const onSubmit = async (data: RegisterForm) => {
     try {
+      setError('')
       await axios.post('/api/auth/register', data)
+      toast.success('Conta criada com sucesso! Faça login para continuar.')
       router.push('/login?registered=true')
-    } catch (error) {
-      setError('Ocorreu um erro ao criar sua conta')
+    } catch (error: any) {
+      console.error('Registration error:', error.response?.data)
+      const message = error.response?.data?.error || 'Ocorreu um erro ao criar sua conta'
+      setError(message)
+      toast.error(message)
     }
   }
 

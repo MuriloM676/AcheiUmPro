@@ -49,7 +49,7 @@ export async function getUserFromToken(token: string): Promise<User | null> {
   const decoded = verifyToken(token);
   if (!decoded) return null;
   const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT id, name, email, role, phone, location, created_at FROM users WHERE id = ?', 
+    'SELECT id, name, email, role, phone, location, created_at FROM users WHERE id = ?',
     [decoded.id]
   );
   return (rows[0] as User) || null;

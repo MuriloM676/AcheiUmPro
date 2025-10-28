@@ -3,6 +3,8 @@ import pool from '@/lib/db';
 import { getUserFromToken, User } from '@/lib/auth';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 
+export const runtime = 'nodejs';
+
 interface RequestRow extends RowDataPacket {
   id: number;
   client_id: number;
@@ -45,7 +47,7 @@ export async function GET(request: NextRequest) {
           r.id, r.client_id, r.provider_id, r.service_id, r.status, 
           r.scheduled_at, r.description, r.created_at,
           u.name as client_name, u.email as client_email,
-          pu.name as provider_name, p.phone as provider_phone,
+          pu.name as provider_name, pu.phone as provider_phone,
           s.name as service_name, s.price as service_price
         FROM requests r
         JOIN users u ON r.client_id = u.id
@@ -74,7 +76,7 @@ export async function GET(request: NextRequest) {
           r.id, r.client_id, r.provider_id, r.service_id, r.status, 
           r.scheduled_at, r.description, r.created_at,
           u.name as client_name, u.email as client_email,
-          pu.name as provider_name, p.phone as provider_phone,
+          pu.name as provider_name, pu.phone as provider_phone,
           s.name as service_name, s.price as service_price
         FROM requests r
         JOIN users u ON r.client_id = u.id

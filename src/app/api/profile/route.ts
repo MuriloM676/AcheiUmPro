@@ -3,6 +3,8 @@ import pool from '@/lib/db';
 import { getUserFromToken } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 
+export const runtime = 'nodejs';
+
 interface UserProfile {
   id: number;
   email: string;
@@ -42,18 +44,19 @@ export async function GET(request: NextRequest) {
     // If provider, get additional provider info
     if (user.role === 'provider') {
       const [providerRows] = await pool.query<RowDataPacket[]>(
-        'SELECT id, location, phone, description, photo_url FROM providers WHERE user_id = ?',
+        'SELECT id, description, photo_url FROM providers WHERE user_id = ?',
         [user.id]
       );
 
       if (providerRows.length > 0) {
         const provider = providerRows[0];
         profile.provider_id = provider.id;
-        profile.location = provider.location;
-        profile.phone = provider.phone;
         profile.description = provider.description;
         profile.photo_url = provider.photo_url;
       }
+
+      profile.location = user.location;
+      profile.phone = user.phone;
     }
 
     return NextResponse.json({ profile });
