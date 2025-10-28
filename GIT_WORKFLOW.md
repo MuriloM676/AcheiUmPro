@@ -2,12 +2,27 @@
 
 Este documento descreve o fluxo de trabalho padrão para desenvolvimento no projeto AcheiUmPro. Todos os membros da equipe devem seguir estas diretrizes para manter a qualidade e organização do código.
 
+## ⚠️ PROBLEMA COMUM: PR indo para `main` em vez de `develop`
+
+**Por que isso acontece?**
+A branch padrão do repositório GitHub está configurada como `main`. Quando você cria um PR a partir de uma branch de feature, o GitHub automaticamente sugere fazer o merge para `main`.
+
+**Como resolver?**
+1. Ao abrir o PR no GitHub, **SEMPRE** verificar qual é a base do PR
+2. Se estiver mostrando `base: main`, clicar e mudar para `base: develop`
+3. Apenas PRs de `develop` → `main` devem usar `main` como base
+
+**Fluxo correto:**
+- Feature branches → `develop` (PR vai para develop)
+- `develop` → `main` (apenas quando estável, para release)
+
 ## Regras Fundamentais
 
 1. **Nunca faça commit diretamente na branch `main`**
 2. **Cada branch deve conter apenas uma feature**
 3. **Todo código deve passar por revisão antes do merge**
 4. **Sempre mantenha sua branch atualizada com `develop`**
+5. **⚠️ SEMPRE verifique a base do PR antes de criar (deve ser `develop` para features)**
 
 ## Fluxo de Trabalho
 
