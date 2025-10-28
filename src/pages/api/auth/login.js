@@ -21,8 +21,23 @@ export default async function handler(req, res) {
     const ok = await comparePassword(password, user.password);
     if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
 
+    if (user.status && user.status !== 'active') {
+      return res.status(403).json({ error: 'Conta suspensa. Entre em contato com o suporte.' });
+    }
+
     const token = signToken({ id: user.id, email: user.email, role: user.role });
-    return res.json({ message: 'Logged in', token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+    return res.json({
+      message: 'Logged in',
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phone: user.phone,
+        location: user.location
+      }
+    });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Internal server error' });

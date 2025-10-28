@@ -10,10 +10,11 @@ export interface User {
   id: number;
   name: string;
   email: string;
-  role: 'client' | 'provider';
-  phone?: string;
-  location?: string;
+  role: 'client' | 'provider' | 'admin';
+  phone?: string | null;
+  location?: string | null;
   created_at?: string;
+  status?: 'active' | 'suspended';
 }
 
 interface JwtPayload {
@@ -49,8 +50,15 @@ export async function getUserFromToken(token: string): Promise<User | null> {
   const decoded = verifyToken(token);
   if (!decoded) return null;
   const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT id, name, email, role, phone, location, created_at FROM users WHERE id = ?',
+    `SELECT id, name, email, role, phone, location, created_at, status
+       FROM users
+      WHERE id = ?`,
     [decoded.id]
   );
-  return (rows[0] as User) || null;
+  const user = (rows[0] as User) || null;
+  if (!user) return null;
+  if (user.status && user.status !== 'active') {
+    return null;
+  }
+  return user;
 }

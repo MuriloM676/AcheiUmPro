@@ -26,6 +26,10 @@ interface Provider {
   avg_rating: number
   reviews_count: number
   services: Service[]
+  is_verified?: boolean
+  recommendation_score?: number
+  next_availability?: string | null
+  is_top_rated?: boolean
 }
 
 interface ProvidersResponse {
@@ -217,24 +221,51 @@ export default function SearchPage() {
                     <span className="text-gray-500 dark:text-gray-500 text-sm ml-2">
                       ({provider.reviews_count || 0} avaliações)
                     </span>
+                    {typeof provider.recommendation_score === 'number' && (
+                      <span className="text-gray-500 dark:text-gray-500 text-sm ml-2">
+                        Score {provider.recommendation_score.toFixed(1)}
+                      </span>
+                    )}
                   </div>
                   
                   {provider.services && provider.services.length > 0 && (
                     <div>
-                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                        Serviços:
-                      </h4>
-                      <div className="flex flex-wrap gap-2">
-                        {provider.services.map((service) => (
-                          <span
-                            key={service.id}
-                            className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full font-medium"
-                          >
-                            {service.name}
-                            {service.price && ` - R$ ${service.price.toFixed(2)}`}
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        {provider.is_top_rated && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-200">
+                            ⭐ Top Rated
                           </span>
-                        ))}
+                        )}
+                        {provider.is_verified && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700 dark:bg-green-900/60 dark:text-green-200">
+                            ✅ Verificado
+                          </span>
+                        )}
+                        {provider.next_availability && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-200">
+                            ⏰ Próximo horário: {provider.next_availability}
+                          </span>
+                        )}
                       </div>
+
+                      {provider.services && provider.services.length > 0 && (
+                        <>
+                          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            Serviços:
+                          </h4>
+                          <div className="flex flex-wrap gap-2">
+                            {provider.services.map((service) => (
+                              <span
+                                key={service.id}
+                                className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full font-medium"
+                              >
+                                {service.name}
+                                {service.price && ` - R$ ${service.price.toFixed(2)}`}
+                              </span>
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                   
@@ -249,12 +280,18 @@ export default function SearchPage() {
                     </div>
                   )}
 
-                  <div className="mt-4">
+                  <div className="mt-4 space-y-2">
                     <button
                       onClick={() => handleOpenRequestModal(provider)}
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
                     >
                       Solicitar Serviço
+                    </button>
+                    <button
+                      onClick={() => router.push(`/provider/${provider.provider_id}`)}
+                      className="w-full bg-white/10 hover:bg-white/20 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                    >
+                      Ver perfil do prestador
                     </button>
                   </div>
                 </div>

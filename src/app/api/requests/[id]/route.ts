@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { getUserFromToken } from '@/lib/auth';
+import { triggerNotification } from '@/lib/notifications';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 
 export const runtime = 'nodejs';
@@ -23,42 +24,159 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    if (user.role !== 'provider') {
-      return NextResponse.json({ error: 'Only providers can update requests' }, { status: 403 });
+    if (user.role !== 'provider' && user.role !== 'admin') {
+      return NextResponse.json({ error: 'Only providers or admins can update requests' }, { status: 403 });
     }
 
     const body = await request.json();
-    const { status } = body;
+    const { status, scheduled_at } = body;
 
     if (!status || !['pending', 'accepted', 'rejected', 'completed'].includes(status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
     }
 
-    // Get provider ID for this user
-    const [providerRows] = await pool.query<RowDataPacket[]>(
-      'SELECT id FROM providers WHERE user_id = ?',
-      [user.id]
-    );
+    let providerId: number | null = null;
 
-    if (!providerRows.length) {
-      return NextResponse.json({ error: 'Provider profile not found' }, { status: 404 });
+    if (user.role === 'provider') {
+      const [providerRows] = await pool.query<RowDataPacket[]>(
+        'SELECT id FROM providers WHERE user_id = ?',
+        [user.id]
+      );
+
+      if (!providerRows.length) {
+        return NextResponse.json({ error: 'Provider profile not found' }, { status: 404 });
+      }
+
+      providerId = providerRows[0].id;
     }
-
-    const providerId = providerRows[0].id;
 
     // Update request only if it belongs to this provider
     const [result] = await pool.query<ResultSetHeader>(
-      'UPDATE requests SET status = ? WHERE id = ? AND provider_id = ?',
-      [status, params.id, providerId]
+      `UPDATE requests
+          SET status = ?,
+              scheduled_at = COALESCE(?, scheduled_at)
+        WHERE id = ? ${providerId ? 'AND provider_id = ?' : ''}`,
+      providerId
+        ? [status, scheduled_at || null, params.id, providerId]
+        : [status, scheduled_at || null, params.id]
     );
 
     if (result.affectedRows === 0) {
       return NextResponse.json({ error: 'Request not found or unauthorized' }, { status: 404 });
     }
 
+    const [contextRows] = await pool.query<RowDataPacket[]>(
+      `SELECT r.id, r.client_id, r.provider_id, u.email AS client_email, u.name AS client_name,
+              p.user_id AS provider_user_id, pu.name AS provider_name
+         FROM requests r
+         JOIN users u ON u.id = r.client_id
+         JOIN providers p ON p.id = r.provider_id
+         JOIN users pu ON pu.id = p.user_id
+        WHERE r.id = ?
+        LIMIT 1`,
+      [params.id]
+    );
+
+    const context = contextRows[0];
+
+    if (context) {
+      const recipientId = user.id === context.client_id ? context.provider_user_id : context.client_id;
+      const title = 'Atualização de solicitação';
+      const statusMessages: Record<string, string> = {
+        pending: 'A solicitação foi marcada como pendente.',
+        accepted: 'A solicitação foi aceita pelo prestador.',
+        rejected: 'A solicitação foi recusada.',
+        completed: 'O serviço foi concluído.'
+      };
+
+      await triggerNotification({
+        userId: recipientId,
+        title,
+        body: statusMessages[status] || 'Uma solicitação foi atualizada.',
+        channels: ['in_app', 'webpush'],
+        metadata: { requestId: Number(params.id) }
+      });
+
+      if (status === 'accepted') {
+        await pool.query(
+          `INSERT INTO appointments (request_id, provider_id, client_id, scheduled_for, status)
+           VALUES (?, ?, ?, COALESCE(?, NOW()), 'confirmed')
+           ON DUPLICATE KEY UPDATE scheduled_for = COALESCE(VALUES(scheduled_for), scheduled_for), status = 'confirmed'`,
+          [params.id, context.provider_id, context.client_id, scheduled_at || null]
+        );
+      }
+
+      if (status === 'completed') {
+        await pool.query(
+          `UPDATE appointments SET status = 'completed' WHERE request_id = ?`,
+          [params.id]
+        );
+      }
+    }
+
     return NextResponse.json({ message: 'Request updated successfully' });
   } catch (error) {
     console.error('Error updating request:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// GET /api/requests/[id] - Details for request participants or admin
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const authHeader = request.headers.get('authorization') || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const user = await getUserFromToken(token);
+    if (!user) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    const requestId = Number(params.id);
+    if (!requestId || Number.isNaN(requestId)) {
+      return NextResponse.json({ error: 'Invalid request id' }, { status: 400 });
+    }
+
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT r.id, r.client_id, r.provider_id, r.service_id, r.status, r.scheduled_at, r.description, r.created_at,
+              c.name AS client_name, c.email AS client_email,
+              pu.name AS provider_name, pu.id AS provider_user_id, pu.phone AS provider_phone,
+              s.name AS service_name, s.price AS service_price,
+              pay.id AS payment_id, pay.status AS payment_status, pay.amount AS payment_amount, pay.checkout_url,
+              app.status AS appointment_status, app.scheduled_for
+         FROM requests r
+         JOIN users c ON c.id = r.client_id
+         JOIN providers p ON p.id = r.provider_id
+         JOIN users pu ON pu.id = p.user_id
+         LEFT JOIN services s ON s.id = r.service_id
+         LEFT JOIN appointments app ON app.request_id = r.id
+         LEFT JOIN payments pay ON pay.request_id = r.id
+        WHERE r.id = ?
+        LIMIT 1`,
+      [requestId]
+    );
+
+    if (!rows.length) {
+      return NextResponse.json({ error: 'Request not found' }, { status: 404 });
+    }
+
+    const requestRow = rows[0];
+    const allowed = user.role === 'admin' || user.id === requestRow.client_id || user.id === requestRow.provider_user_id;
+
+    if (!allowed) {
+      return NextResponse.json({ error: 'Not allowed' }, { status: 403 });
+    }
+
+    return NextResponse.json({ request: requestRow });
+  } catch (error) {
+    console.error('Error fetching request details:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

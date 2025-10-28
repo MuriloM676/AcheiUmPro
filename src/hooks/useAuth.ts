@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 
+type AllowedRole = 'client' | 'provider' | 'admin'
+
 interface UseAuthOptions {
   requireAuth?: boolean
-  allowedRoles?: Array<'client' | 'provider'>
+  allowedRoles?: Array<AllowedRole>
 }
 
 export function useAuth(options: UseAuthOptions = {}) {

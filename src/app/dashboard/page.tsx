@@ -1,12 +1,13 @@
 ﻿'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios'
 import { toast } from 'react-toastify'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/Button'
 import { useAuth } from '@/hooks/useAuth'
 import { AuthGuard } from '@/components/AuthGuard'
+import Link from 'next/link'
 
 type RequestStatus = 'pending' | 'accepted' | 'rejected' | 'completed'
 
@@ -52,6 +53,10 @@ function DashboardContent() {
   const [reviewComment, setReviewComment] = useState('')
   const [savingReview, setSavingReview] = useState(false)
   const [selectedRequest, setSelectedRequest] = useState<RequestItem | null>(null)
+  const [notifications, setNotifications] = useState<any[]>([])
+  const [unreadNotifications, setUnreadNotifications] = useState<number>(0)
+  const previousPendingIdsRef = useRef<number[]>([])
+  const firstLoadRef = useRef(true)
 
   const isProvider = user?.role === 'provider'
 
@@ -85,6 +90,51 @@ function DashboardContent() {
   useEffect(() => {
     loadRequests()
   }, [loadRequests])
+
+  const loadNotifications = useCallback(async () => {
+    if (!token) return
+
+    try {
+      const { data } = await axios.get('/api/notifications?status=unread', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      setNotifications(data.notifications || [])
+      setUnreadNotifications(data.notifications?.length || 0)
+    } catch (error) {
+      // ignore
+    }
+  }, [token])
+
+  useEffect(() => {
+    loadNotifications()
+
+    const interval = setInterval(() => {
+      loadNotifications()
+    }, 15000)
+
+    return () => clearInterval(interval)
+  }, [loadNotifications])
+
+  useEffect(() => {
+    if (!isProvider) return
+    const pendingIds = requests.filter((request) => request.status === 'pending').map((request) => request.id)
+
+    if (!firstLoadRef.current) {
+      const newIds = pendingIds.filter((id) => !previousPendingIdsRef.current.includes(id))
+      if (newIds.length > 0) {
+        toast.info(
+          newIds.length === 1
+            ? 'Você recebeu uma nova solicitação de serviço.'
+            : `Você recebeu ${newIds.length} novas solicitações de serviço.`,
+          { autoClose: 4000 }
+        )
+      }
+    }
+
+    previousPendingIdsRef.current = pendingIds
+    firstLoadRef.current = false
+  }, [isProvider, requests])
 
   const handleUpdateStatus = async (requestId: number, status: RequestStatus) => {
     try {
@@ -162,8 +212,26 @@ function DashboardContent() {
             <h1 className="text-2xl font-bold">AcheiUmPro</h1>
             <p className="text-xs text-gray-300">{isProvider ? 'Painel do prestador' : 'Painel do cliente'}</p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <span className="text-gray-200">Olá, {user.name || user.email}</span>
+            <Link
+              href="/notifications"
+              className="relative inline-flex items-center justify-center rounded-lg border border-white/20 px-3 py-2 text-sm text-white hover:bg-white/10"
+            >
+              Notificações
+              {unreadNotifications > 0 && (
+                <span className="ml-2 inline-flex items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-xs">
+                  {unreadNotifications}
+                </span>
+              )}
+            </Link>
+            <Button
+              variant="outline"
+              className="border-white/40 text-white hover:bg-white/10"
+              onClick={() => router.push('/profile')}
+            >
+              Meu perfil
+            </Button>
             <Button variant="secondary" onClick={logout}>
               Sair
             </Button>
@@ -172,7 +240,7 @@ function DashboardContent() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-white/10 border border-white/10 rounded-xl p-6">
             <p className="text-sm text-gray-300 mb-2">Total de solicitações</p>
             <p className="text-4xl font-bold">{requests.length}</p>
@@ -184,6 +252,10 @@ function DashboardContent() {
           <div className="bg-white/10 border border-white/10 rounded-xl p-6">
             <p className="text-sm text-gray-300 mb-2">Concluídas</p>
             <p className="text-4xl font-bold">{requests.filter((r) => r.status === 'completed').length}</p>
+          </div>
+          <div className="bg-white/10 border border-white/10 rounded-xl p-6">
+            <p className="text-sm text-gray-300 mb-2">Notificações não lidas</p>
+            <p className="text-4xl font-bold">{unreadNotifications}</p>
           </div>
         </section>
 
@@ -319,6 +391,29 @@ function DashboardContent() {
             <Button onClick={() => router.push('/search')}>Buscar profissionais</Button>
           </section>
         )}
+
+        <section className="bg-white/10 border border-white/10 rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold">Mensagens recentes</h3>
+              <p className="text-gray-300 text-sm">Acompanhe conversas com seus clientes ou prestadores.</p>
+            </div>
+            <Button variant="outline" className="border-white/40 text-white hover:bg-white/10" onClick={() => router.push('/messages')}>
+              Abrir chat
+            </Button>
+          </div>
+          <div className="space-y-3">
+            {notifications.slice(0, 3).map((notif) => (
+              <div key={notif.id} className="bg-black/20 rounded-lg px-4 py-3 text-sm text-gray-200">
+                <p className="font-medium text-white">{notif.title}</p>
+                <p className="text-xs text-gray-400">{new Date(notif.created_at).toLocaleString('pt-BR')}</p>
+              </div>
+            ))}
+            {notifications.length === 0 && (
+              <p className="text-sm text-gray-400">Nenhuma mensagem recente.</p>
+            )}
+          </div>
+        </section>
       </main>
 
       {reviewModalOpen && selectedRequest && (

@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth'
 
 interface AuthGuardProps {
   children: ReactNode
-  roles?: Array<'client' | 'provider'>
+  roles?: Array<'client' | 'provider' | 'admin'>
   fallback?: ReactNode
 }
 
