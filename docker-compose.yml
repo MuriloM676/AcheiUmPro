@@ -13,26 +13,5 @@ services:
     ports:
       - '3306:3306'
 
-  backend:
-    build: .
-    depends_on:
-      - db
-    environment:
-      NODE_ENV: development
-      DB_HOST: db
-      DB_PORT: 3306
-      DB_USER: acheiuser
-      DB_PASSWORD: acheipass
-      DB_NAME: acheiumpro
-      JWT_SECRET: change_this_secret
-    ports:
-      - '3000:3000'
-    # mount source so edits are visible and allow running dev server
-    volumes:
-      - ./:/app
-    # install deps on container start and run dev server (uses sh available in node:alpine)
-    command: sh -c "npm install && npm run dev"
-    restart: unless-stopped
-
 volumes:
   db-data:
