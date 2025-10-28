@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import pool from './db';
 import { RowDataPacket } from 'mysql2';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import type { JWT } from 'next-auth/jwt'
+import type { Session } from 'next-auth'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change_this_secret';
 const JWT_EXPIRES = '7d';
@@ -65,17 +67,17 @@ export const authOptions = {
     })
   ],
   callbacks: {
-    async jwt({ token, user }: any) {
+    async jwt({ token, user }: { token: JWT & { id?: string; role?: string }; user?: any }) {
       if (user) {
-        token.id = user.id;
-        token.role = user.role;
+        (token as any).id = user.id;
+        (token as any).role = user.role;
       }
       return token;
     },
-    async session({ session, token }: any) {
+    async session({ session, token }: { session: Session & { user?: any }; token: JWT & { id?: string; role?: string } }) {
       if (session?.user) {
-        session.user.id = token.id;
-        session.user.role = token.role;
+        (session.user as any).id = token.id;
+        (session.user as any).role = token.role;
       }
       return session;
     }

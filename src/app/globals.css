@@ -1,26 +1,61 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Paleta de cores profissional */
+  --primary: #6A4C93;       /* Roxo Real - Cor primária */
+  --secondary-1: #4A6FA5;   /* Azul Índigo - Cor secundária 1 */
+  --secondary-2: #9B7EDE;   /* Lilás Suave - Cor secundária 2 */
+  --accent: #38B2AC;        /* Turquesa Vibrante - Cor de destaque */
+  --background: #F7F7FC;    /* Cinza Pérola - Fundo claro */
+  --foreground: #2D3748;    /* Cinza Grafite - Texto escuro */
+  
+  /* Variações de tons */
+  --primary-light: #8A6CB3;
+  --primary-dark: #4A3273;
+  --accent-light: #58D2CC;
+  --accent-dark: #28928C;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-secondary-1: var(--secondary-1);
+  --color-secondary-2: var(--secondary-2);
+  --color-accent: var(--accent);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+}
+
+/* Estilos de botões */
+.btn-primary {
+  background-color: var(--primary);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-dark);
+}
+
+.btn-accent {
+  background-color: var(--accent);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.btn-accent:hover {
+  background-color: var(--accent-dark);
 }
