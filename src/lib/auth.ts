@@ -1,62 +1,56 @@
-import { NextAuthOptions } from 'next-auth'
-import CredentialsProvider from 'next-auth/providers/credentials'
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import pool from './db';
+import { RowDataPacket } from 'mysql2';
 
-export const authOptions: NextAuthOptions = {
-  providers: [
-    CredentialsProvider({
-      name: 'Credentials',
-      credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' }
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null
-        }
+const JWT_SECRET = process.env.JWT_SECRET || 'change_this_secret';
+const JWT_EXPIRES = '7d';
 
-        try {
-          // Replace with your actual API call
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: credentials.email,
-              password: credentials.password,
-            }),
-          })
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: 'client' | 'provider';
+  phone?: string;
+  location?: string;
+  created_at?: string;
+}
 
-          const user = await response.json()
+interface JwtPayload {
+  id: number;
+  email: string;
+  role: string;
+}
 
-          if (response.ok && user) {
-            return user
-          }
-          return null
-        } catch (error) {
-          return null
-        }
-      },
-    }),
-  ],
-  pages: {
-    signIn: '/login',
-  },
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id
-        token.role = user.role
-      }
-      return token
-    },
-    async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id
-        session.user.role = token.role
-      }
-      return session
-    },
-  },
-  session: {
-    strategy: 'jwt',
-  },
+export async function hashPassword(plain: string): Promise<string> {
+  const salt = await bcrypt.genSalt(10);
+  return bcrypt.hash(plain, salt);
+}
+
+export async function comparePassword(plain: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(plain, hash);
+}
+
+export function signToken(user: User): string {
+  // include minimal claims
+  const payload: JwtPayload = { id: user.id, email: user.email, role: user.role };
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES });
+}
+
+export function verifyToken(token: string): JwtPayload | null {
+  try {
+    return jwt.verify(token, JWT_SECRET) as JwtPayload;
+  } catch (err) {
+    return null;
+  }
+}
+
+export async function getUserFromToken(token: string): Promise<User | null> {
+  const decoded = verifyToken(token);
+  if (!decoded) return null;
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT id, name, email, role, phone, location, created_at FROM users WHERE id = ?', 
+    [decoded.id]
+  );
+  return (rows[0] as User) || null;
 }

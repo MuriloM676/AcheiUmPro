@@ -1,87 +1,141 @@
+'use client'
+
 import { Input } from '@/components/Input'
+import { Button } from '@/components/Button'
 import { useState } from 'react'
-import { useQuery } from 'react-query'
+import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 
-interface Provider {
-  id: string
+interface Service {
+  id: number
   name: string
-  services: string[]
-  location: string
-  rating: number
-  imageUrl: string | null
+  price: number | null
+}
+
+interface Provider {
+  provider_id: number
+  user_id: number
+  name: string
+  email: string
+  phone: string | null
+  location: string | null
+  description: string | null
+  photo_url: string | null
+  avg_rating: number
+  services: Service[]
+}
+
+interface ProvidersResponse {
+  providers: Provider[]
 }
 
 export default function SearchPage() {
-  const [searchParams, setSearchParams] = useState({
-    service: '',
-    location: ''
+  const [searchQuery, setSearchQuery] = useState('')
+  const [serviceFilter, setServiceFilter] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+
+  const { data, isLoading, error } = useQuery<ProvidersResponse>({
+    queryKey: ['providers', debouncedQuery, serviceFilter],
+    queryFn: async () => {
+      const params: any = {}
+      if (debouncedQuery) params.q = debouncedQuery
+      if (serviceFilter) params.service = serviceFilter
+      
+      const { data } = await axios.get('/api/providers', { params })
+      return data
+    },
   })
 
-  const { data: providers, isLoading } = useQuery(
-    ['providers', searchParams],
-    async () => {
-      const { data } = await axios.get<Provider[]>('/api/providers', {
-        params: searchParams
-      })
-      return data
+  const handleSearch = () => {
+    setDebouncedQuery(searchQuery)
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch()
     }
-  )
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-8 text-center">
+          Encontre Profissionais
+        </h1>
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Input
-              placeholder="Tipo de serviço"
-              value={searchParams.service}
-              onChange={(e) =>
-                setSearchParams((prev) => ({ ...prev, service: e.target.value }))
-              }
+              placeholder="Buscar por nome, localização ou descrição..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="md:col-span-2"
             />
+            <Button onClick={handleSearch} variant="primary">
+              Buscar
+            </Button>
+          </div>
+          <div className="mt-4">
             <Input
-              placeholder="Localização"
-              value={searchParams.location}
-              onChange={(e) =>
-                setSearchParams((prev) => ({ ...prev, location: e.target.value }))
-              }
+              placeholder="Filtrar por serviço específico (ex: Encanador)"
+              value={serviceFilter}
+              onChange={(e) => setServiceFilter(e.target.value)}
+              onKeyPress={handleKeyPress}
             />
           </div>
         </div>
 
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            Erro ao carregar profissionais. Tente novamente.
+          </div>
+        )}
+
         {isLoading ? (
           <div className="text-center py-12">
             <div className="w-12 h-12 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin mx-auto"></div>
+            <p className="mt-4 text-gray-600 dark:text-gray-400">Carregando profissionais...</p>
           </div>
-        ) : (
+        ) : data?.providers && data.providers.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {providers?.map((provider) => (
+            {data.providers.map((provider) => (
               <div
-                key={provider.id}
-                className="bg-white rounded-lg shadow-sm overflow-hidden"
+                key={provider.provider_id}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
               >
-                <div className="h-48 bg-gray-200">
-                  {provider.imageUrl && (
+                <div className="h-48 bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center">
+                  {provider.photo_url ? (
                     <img
-                      src={provider.imageUrl}
+                      src={provider.photo_url}
                       alt={provider.name}
                       className="w-full h-full object-cover"
                     />
+                  ) : (
+                    <div className="text-6xl text-white">👤</div>
                   )}
                 </div>
-                <div className="p-4">
-                  <h3 className="text-lg font-semibold">{provider.name}</h3>
-                  <p className="text-gray-600 text-sm mb-2">
-                    {provider.location}
-                  </p>
-                  <div className="flex items-center mb-2">
+                <div className="p-6">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                    {provider.name}
+                  </h3>
+                  {provider.location && (
+                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-2 flex items-center">
+                      <span className="mr-1">📍</span> {provider.location}
+                    </p>
+                  )}
+                  {provider.description && (
+                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-3 line-clamp-2">
+                      {provider.description}
+                    </p>
+                  )}
+                  <div className="flex items-center mb-3">
                     <div className="flex text-yellow-400">
                       {Array.from({ length: 5 }).map((_, i) => (
                         <svg
                           key={i}
                           className={`w-5 h-5 ${
-                            i < provider.rating ? 'fill-current' : 'fill-gray-300'
+                            i < Math.round(provider.avg_rating) ? 'fill-current' : 'fill-gray-300'
                           }`}
                           xmlns="http://www.w3.org/2000/svg"
                           viewBox="0 0 20 20"
@@ -90,23 +144,50 @@ export default function SearchPage() {
                         </svg>
                       ))}
                     </div>
-                    <span className="text-gray-600 text-sm ml-2">
-                      {provider.rating.toFixed(1)}
+                    <span className="text-gray-600 dark:text-gray-400 text-sm ml-2">
+                      {provider.avg_rating.toFixed(1)}
                     </span>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {provider.services.map((service) => (
-                      <span
-                        key={service}
-                        className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                  
+                  {provider.services && provider.services.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Serviços:
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {provider.services.map((service) => (
+                          <span
+                            key={service.id}
+                            className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full font-medium"
+                          >
+                            {service.name}
+                            {service.price && ` - R$ ${service.price.toFixed(2)}`}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {provider.phone && (
+                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <a
+                        href={`tel:${provider.phone}`}
+                        className="text-blue-600 dark:text-blue-400 hover:underline text-sm flex items-center"
                       >
-                        {service}
-                      </span>
-                    ))}
-                  </div>
+                        <span className="mr-1">📞</span> {provider.phone}
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow">
+            <div className="text-6xl mb-4">🔍</div>
+            <p className="text-gray-600 dark:text-gray-400 text-lg">
+              Nenhum profissional encontrado. Tente outra busca.
+            </p>
           </div>
         )}
       </div>
