@@ -1,61 +1,62 @@
-# AcheiUmPro — Backend (Next.js API + MySQL)
+# AcheiUmPro — Backend (Next.js API) + MySQL (apenas MySQL em Docker)
 
-This repository contains a minimal Next.js (API routes) backend that connects to a MySQL database running in Docker. It implements registration and login for clients and providers, profile updates, creating requests, and listing providers.
+Este repositório contém um backend em Next.js (API routes) que usa um banco MySQL rodando em Docker. Agora o backend roda localmente (fora do Docker) e apenas o MySQL fica containerizado.
 
-Features
-- Next.js API routes (under `src/pages/api`)
-- MySQL schema provided in `initdb/init.sql`
-- Authentication with JWT and bcrypt
-- Docker Compose with MySQL and backend services
-- Basic validation (Joi) and clear success/error messages
+Principais pontos
+- Next.js API routes (em `src/pages/api` e novas rotas no App Router em `src/app/api`)
+- MySQL inicializado a partir de `initdb/init.sql`
+- Autenticação com JWT + bcrypt
+- Docker Compose somente para o serviço `db`
+- Validação básica (Joi)
 
-Environment (in docker-compose)
-- DB_HOST=db
+Variáveis de ambiente (rodando localmente)
+- DB_HOST=localhost
 - DB_PORT=3306
 - DB_USER=acheiuser
 - DB_PASSWORD=acheipass
 - DB_NAME=acheiumpro
 - JWT_SECRET=change_this_secret
 
-How to run with Docker Compose
-1. Ensure Docker is running.
-2. From this project root run:
+Como subir apenas o MySQL (Docker)
+1) Certifique-se de que o Docker Desktop está rodando.
+2) Na raiz do projeto, execute:
 
 ```powershell
-docker compose up --build
+docker compose up -d db
 ```
 
-This will launch MySQL (initialized using `initdb/init.sql`) and the Next.js backend on port 3000.
-
-API overview (examples)
-- POST /api/auth/register — register a client or provider. Body: { name, email, password, role: 'client'|'provider', ... }
-- POST /api/auth/login — login (returns JWT)
-- PUT /api/profile — update profile (Authorization: Bearer <token>)
-- GET /api/providers — list providers (optional ?service=NAME or ?q=search)
-- POST /api/requests — create a request (Authorization: Bearer <token>)
-
-Extras adicionados
-- `openapi.yaml` — especificação OpenAPI (subset) em `openapi.yaml` para gerar clientes ou documentação.
-- `postman_collection.json` — collection mínima com exemplos de Register/Login/List Providers/Create Request.
-- `scripts/seed.js` — script Node para popular o banco com um cliente, um prestador e serviços (usa as helpers do projeto, execute após o banco estar disponível).
-
-Como usar o seed (após subir o MySQL):
+Como rodar o backend localmente
+1) Instale as dependências:
 
 ```powershell
-# no Windows PowerShell, com as variáveis apontando para o DB do Docker (opcional, usa valores do docker-compose por padrão)
-setx DB_HOST db
-setx DB_USER acheiuser
-setx DB_PASSWORD acheipass
-setx DB_NAME acheiumpro
-
-# instalar dependências localmente (uma vez)
 npm install
+```
 
-# rodar seed (garanta que o container db esteja pronto)
+2) (Opcional) Desabilite o Turbopack se encontrar instabilidades no dev server:
+
+```powershell
+$env:NEXT_DISABLE_TURBOPACK = "1"
+```
+
+3) Exporte as variáveis de ambiente para apontar para o MySQL em Docker (ou crie um `.env.local` com os valores acima):
+
+```powershell
+$env:DB_HOST = "localhost"; $env:DB_PORT = "3306"; $env:DB_USER = "acheiuser"; $env:DB_PASSWORD = "acheipass"; $env:DB_NAME = "acheiumpro"; $env:JWT_SECRET = "change_this_secret"
+```
+
+4) Rode o servidor de desenvolvimento:
+
+```powershell
+npm run dev
+```
+
+Seed de dados (opcional)
+
+```powershell
+# Com o container do MySQL no ar (db)
 node scripts/seed.js
 ```
 
-
-Notes
-- Update `JWT_SECRET` in docker-compose.yml for production.
-- The init SQL creates required tables and runs only on first-time DB init.
+Notas
+- Ajuste `JWT_SECRET` para um valor seguro em ambientes reais.
+- O script de init em `initdb/init.sql` roda apenas na primeira inicialização do volume do MySQL.
