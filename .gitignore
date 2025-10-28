@@ -1,0 +1,49 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Next.js
+.next/
+out/
+
+# Environment
+.env
+.env.*.local
+.env.local
+
+# Logs
+logs/
+*.log
+pids/
+*.pid
+*.seed
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.sublime-workspace
+
+# Docker
+# Ignore local compose overrides and sensitive envs
+docker-compose.override.yml
+**/docker-compose.override.yml
+
+# Do not ignore initdb (schema) - keep SQL in repo
+
+# Optional: ignore local database files
+*.sqlite
+*.db
+
+# Coverage
+coverage/
+
+# Generated files
+dist/
+build/

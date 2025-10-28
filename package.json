@@ -1,0 +1,19 @@
+{
+  "name": "acheiumpro-backend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -H 0.0.0.0",
+    "build": "next build",
+    "start": "next start -p 3000"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "joi": "^17.9.2",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.5.2",
+    "next": "16.0.0",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  }
+}
