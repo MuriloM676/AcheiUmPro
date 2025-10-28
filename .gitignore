@@ -1,41 +1,49 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
+# Node
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# Next.js
+.next/
+out/
 
-# vercel
-.vercel
+# Environment
+.env
+.env.*.local
+.env.local
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# Logs
+logs/
+*.log
+pids/
+*.pid
+*.seed
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.sublime-workspace
+
+# Docker
+# Ignore local compose overrides and sensitive envs
+docker-compose.override.yml
+**/docker-compose.override.yml
+
+# Do not ignore initdb (schema) - keep SQL in repo
+
+# Optional: ignore local database files
+*.sqlite
+*.db
+
+# Coverage
+coverage/
+
+# Generated files
+dist/
+build/

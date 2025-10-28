@@ -1,0 +1,245 @@
+openapi: 3.0.3
+info:
+  title: AcheiUmPro API
+  version: 1.0.0
+  description: OpenAPI spec for AcheiUmPro backend (minimal subset)
+servers:
+  - url: http://localhost:3000
+
+paths:
+  /api/auth/register:
+    post:
+      summary: Register a client or provider
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Register'
+      responses:
+        '201':
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Validation error
+  /api/auth/login:
+    post:
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /api/profile:
+    put:
+      summary: Update profile (protected)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdate'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /api/providers:
+    get:
+      summary: List providers
+      parameters:
+        - in: query
+          name: service
+          schema:
+            type: string
+        - in: query
+          name: q
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProvidersList'
+
+  /api/requests:
+    post:
+      summary: Create a request (client only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  requestId:
+                    type: integer
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Register:
+      type: object
+      required: [name, email, password, role]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+          enum: [client, provider]
+        location:
+          type: string
+        description:
+          type: string
+        photo_url:
+          type: string
+          format: uri
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/Service'
+
+    Login:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        token:
+          type: string
+        user:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            email:
+              type: string
+            role:
+              type: string
+
+    ProfileUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        location:
+          type: string
+        description:
+          type: string
+        photo_url:
+          type: string
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/Service'
+
+    Service:
+      type: object
+      properties:
+        name:
+          type: string
+        price:
+          type: number
+
+    ProvidersList:
+      type: object
+      properties:
+        providers:
+          type: array
+          items:
+            type: object
+            properties:
+              provider_id:
+                type: integer
+              user_id:
+                type: integer
+              name:
+                type: string
+              email:
+                type: string
+              phone:
+                type: string
+              location:
+                type: string
+              description:
+                type: string
+              photo_url:
+                type: string
+              avg_rating:
+                type: number
+              services:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Service'
+
+    RequestCreate:
+      type: object
+      required: [provider_id]
+      properties:
+        provider_id:
+          type: integer
+        service_id:
+          type: integer
+        scheduled_at:
+          type: string
+          format: date-time
+        description:
+          type: string
