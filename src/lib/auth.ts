@@ -33,7 +33,7 @@ export const authOptions = {
 
         try {
           const [rows] = await pool.query<RowDataPacket[]>(
-            'SELECT id, name, email, password, role, status FROM users WHERE email = ?',
+            'SELECT id, name, email, password, role FROM users WHERE email = ?',
             [credentials.email]
           );
 
@@ -65,15 +65,15 @@ export const authOptions = {
     })
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: any) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
       }
       return token;
     },
-    async session({ session, token }) {
-      if (session.user) {
+    async session({ session, token }: any) {
+      if (session?.user) {
         session.user.id = token.id;
         session.user.role = token.role;
       }
@@ -84,7 +84,7 @@ export const authOptions = {
     signIn: '/login',
   },
   session: {
-    strategy: 'jwt',
+    strategy: 'jwt' as const,
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET || JWT_SECRET,
@@ -123,7 +123,7 @@ export async function getUserFromToken(token: string): Promise<User | null> {
   const decoded = verifyToken(token);
   if (!decoded) return null;
   const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT id, name, email, role, phone, location, created_at, status
+    `SELECT id, name, email, role, phone, location, created_at
        FROM users
       WHERE id = ?`,
     [decoded.id]
