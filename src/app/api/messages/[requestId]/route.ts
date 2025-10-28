@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { getUserFromToken } from '@/lib/auth'
 import { triggerNotification } from '@/lib/notifications'
+import { queryWithRetry } from '@/lib/dbHelpers'
 import { ResultSetHeader, RowDataPacket } from 'mysql2'
 
 export const runtime = 'nodejs'
@@ -42,7 +43,7 @@ async function resolveRequestContext(requestId: number) {
   return rows[0]
 }
 
-    export async function GET(request: NextRequest, { params }: { params: Promise<{ requestId: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ requestId: string }> }) {
   try {
     const authHeader = request.headers.get('authorization') || ''
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
@@ -76,15 +77,12 @@ async function resolveRequestContext(requestId: number) {
 
     let messages: MessageRow[] = [] as any
     try {
-      const [mRows] = await pool.query<MessageRow[]>(
-        `SELECT m.id, m.request_id, m.sender_id, m.recipient_id, m.content, m.attachment_url, m.attachment_type, m.created_at,
+      const [mRows] = await queryWithRetry(pool, `SELECT m.id, m.request_id, m.sender_id, m.recipient_id, m.content, m.attachment_url, m.attachment_type, m.created_at,
                 u.name AS sender_name
            FROM messages m
            JOIN users u ON u.id = m.sender_id
           WHERE m.request_id = ?
-          ORDER BY m.created_at ASC`,
-        [requestId]
-      )
+          ORDER BY m.created_at ASC`, [requestId])
       messages = mRows as MessageRow[]
     } catch (err: any) {
       if (err && err.code === 'ER_NO_SUCH_TABLE') {
@@ -146,11 +144,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     let result: ResultSetHeader
     try {
-      const [r] = await pool.query<ResultSetHeader>(
-        `INSERT INTO messages (request_id, sender_id, recipient_id, content, attachment_url, attachment_type)
-         VALUES (?, ?, ?, ?, ?, ?)` ,
-        [requestId, user.id, recipientId, content || null, attachmentUrl, attachmentType]
-      )
+      const [r] = await queryWithRetry(pool, `INSERT INTO messages (request_id, sender_id, recipient_id, content, attachment_url, attachment_type)
+         VALUES (?, ?, ?, ?, ?, ?)`, [requestId, user.id, recipientId, content || null, attachmentUrl, attachmentType])
       result = r
     } catch (err: any) {
       if (err && err.code === 'ER_NO_SUCH_TABLE') {
@@ -159,15 +154,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       throw err
     }
 
-    const [storedMessages] = await pool.query<MessageRow[]>(
-      `SELECT m.id, m.request_id, m.sender_id, m.recipient_id, m.content, m.attachment_url, m.attachment_type, m.created_at,
-              u.name AS sender_name
-         FROM messages m
-         JOIN users u ON u.id = m.sender_id
-        WHERE m.id = ?
-        LIMIT 1`,
-      [result.insertId]
-    )
+    const [storedMessages] = await queryWithRetry(pool, `SELECT m.id, m.request_id, m.sender_id, m.recipient_id, m.content, m.attachment_url, m.attachment_type, m.created_at,
+               u.name AS sender_name
+          FROM messages m
+          JOIN users u ON u.id = m.sender_id
+         WHERE m.id = ?
+         LIMIT 1`, [result.insertId])
 
     const savedMessage = storedMessages[0]
     if (!savedMessage) {

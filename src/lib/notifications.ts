@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer'
 import webpush from 'web-push'
 import twilio from 'twilio'
 import pool from '@/lib/db'
+import { queryWithRetry } from './dbHelpers'
 import { RowDataPacket } from 'mysql2'
 
 export type NotificationChannel = 'webpush' | 'email' | 'sms' | 'in_app'
@@ -84,16 +85,10 @@ function configureWebPush() {
 
 async function insertNotification(userId: number, channel: NotificationChannel, title: string, body: string, metadata?: Record<string, unknown>) {
   try {
-    await pool.query(
-      'INSERT INTO notifications (user_id, channel, title, body, metadata) VALUES (?, ?, ?, ?, JSON_OBJECT())',
-      [userId, channel, title, body]
-    )
+    await queryWithRetry(pool, 'INSERT INTO notifications (user_id, channel, title, body, metadata) VALUES (?, ?, ?, ?, JSON_OBJECT())', [userId, channel, title, body])
 
     if (metadata && Object.keys(metadata).length > 0) {
-      await pool.query(
-        'UPDATE notifications SET metadata = JSON_MERGE_PATCH(IFNULL(metadata, JSON_OBJECT()), CAST(? AS JSON)) WHERE user_id = ? AND channel = ? AND title = ? ORDER BY id DESC LIMIT 1',
-        [JSON.stringify(metadata), userId, channel, title]
-      )
+      await queryWithRetry(pool, 'UPDATE notifications SET metadata = JSON_MERGE_PATCH(IFNULL(metadata, JSON_OBJECT()), CAST(? AS JSON)) WHERE user_id = ? AND channel = ? AND title = ? ORDER BY id DESC LIMIT 1', [JSON.stringify(metadata), userId, channel, title])
     }
   } catch (err: any) {
     // If notifications table doesn't exist, skip silently to avoid crashing the app
@@ -109,10 +104,7 @@ async function notifyEmail(userId: number, title: string, body: string) {
   const transporter = getTransporter()
   if (!transporter) return
 
-  const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT email FROM users WHERE id = ? LIMIT 1',
-    [userId]
-  )
+  const [rows] = await queryWithRetry(pool, 'SELECT email FROM users WHERE id = ? LIMIT 1', [userId])
 
   if (!rows.length) return
 
@@ -128,10 +120,7 @@ async function notifySms(userId: number, body: string) {
   const client = getTwilioClient()
   if (!client) return
 
-  const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT phone FROM users WHERE id = ? LIMIT 1',
-    [userId]
-  )
+  const [rows] = await queryWithRetry(pool, 'SELECT phone FROM users WHERE id = ? LIMIT 1', [userId])
   if (!rows.length || !rows[0].phone) return
 
   await client.messages.create({
@@ -145,17 +134,14 @@ async function notifyWebPush(userId: number, payload: { title: string; body: str
   configureWebPush()
   if (!webPushConfigured) return
 
-  const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT endpoint, p256dh, auth FROM notification_subscriptions WHERE user_id = ?',
-    [userId]
-  )
+  const [rows] = await queryWithRetry(pool, 'SELECT endpoint, p256dh, auth FROM notification_subscriptions WHERE user_id = ?', [userId])
 
   if (!rows.length) return
 
   const notificationPayload = JSON.stringify({ title: payload.title, body: payload.body })
 
   await Promise.all(
-    rows.map(async (row) => {
+    rows.map(async (row: any) => {
       try {
         await webpush.sendNotification(
           {
@@ -203,12 +189,9 @@ export async function triggerNotification(options: TriggerOptions) {
 
 export async function registerWebPushSubscription(userId: number, subscription: WebPushSubscription) {
   try {
-    await pool.query(
-      `INSERT INTO notification_subscriptions (user_id, endpoint, p256dh, auth)
+    await queryWithRetry(pool, `INSERT INTO notification_subscriptions (user_id, endpoint, p256dh, auth)
        VALUES (?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE p256dh = VALUES(p256dh), auth = VALUES(auth)` ,
-      [userId, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth]
-    )
+       ON DUPLICATE KEY UPDATE p256dh = VALUES(p256dh), auth = VALUES(auth)`, [userId, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth])
   } catch (err: any) {
     if (err && err.code === 'ER_NO_SUCH_TABLE') {
       console.warn('notification_subscriptions table missing; skipping registerWebPushSubscription')
