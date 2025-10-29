@@ -47,7 +47,13 @@ export function useAuth(options: UseAuthOptions = {}) {
     }
 
     if (!requireAuth && storedToken && parsedUser && isAuthPage) {
-      router.replace('/dashboard')
+      if (parsedUser.role === 'client') {
+        router.replace('/dashboard/client')
+      } else if (parsedUser.role === 'provider') {
+        router.replace('/dashboard/provider')
+      } else {
+        router.replace('/dashboard')
+      }
     }
 
     setToken(storedToken)

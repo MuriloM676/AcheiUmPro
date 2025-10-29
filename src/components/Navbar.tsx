@@ -2,9 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from './Button';
 
 export default function Navbar() {
   const pathname = usePathname();
+  const { user, logout, isAuthenticated } = useAuth({ requireAuth: false });
 
   return (
     <header className="border-b border-gray-200" style={{ backgroundColor: 'white' }}>
@@ -17,38 +20,70 @@ export default function Navbar() {
 
           {/* Menu principal */}
           <nav className="hidden md:flex space-x-8">
-            <Link 
-              href="/search"
-              className={`text-gray-600 hover:text-primary ${pathname === '/search' ? 'font-medium' : ''}`}
-            >
-              Buscar Profissionais
-            </Link>
-            <Link 
-              href="/trabalho-freelancer" 
-              className={`text-gray-600 hover:text-primary ${pathname === '/trabalho-freelancer' ? 'font-medium' : ''}`}
-            >
-              Trabalho Freelancer
-            </Link>
+            {!isAuthenticated && (
+              <>
+                <Link 
+                  href="/search"
+                  className={`text-gray-600 hover:text-primary ${pathname === '/search' ? 'font-medium' : ''}`}
+                >
+                  Buscar Profissionais
+                </Link>
+                <Link 
+                  href="/register" 
+                  className={`text-gray-600 hover:text-primary ${pathname === '/register' ? 'font-medium' : ''}`}
+                >
+                  Para Profissionais
+                </Link>
+              </>
+            )}
+            
+            {isAuthenticated && (
+              <>
+                <Link
+                  href={user?.role === 'client' ? '/dashboard/client' : '/dashboard/provider'}
+                  className={`text-gray-600 hover:text-primary ${pathname?.includes('/dashboard') ? 'font-medium' : ''}`}
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  href="/search"
+                  className={`text-gray-600 hover:text-primary ${pathname === '/search' ? 'font-medium' : ''}`}
+                >
+                  Buscar
+                </Link>
+              </>
+            )}
           </nav>
 
           {/* Botões de ação */}
           <div className="flex items-center space-x-4">
-            <Link 
-              href="/register"
-              className="text-gray-700 hover:text-primary font-medium"
-            >
-              Cadastre-se
-            </Link>
-            <Link 
-              href="/login"
-              className="px-4 py-2 rounded-md font-medium"
-              style={{ 
-                backgroundColor: 'var(--primary)', 
-                color: 'white',
-              }}
-            >
-              Entrar
-            </Link>
+            {!isAuthenticated ? (
+              <>
+                <Link
+                  href="/register"
+                  className="text-gray-700 hover:text-primary font-medium"
+                >
+                  Cadastre-se
+                </Link>
+                <Link
+                  href="/login"
+                  className="px-4 py-2 rounded-md font-medium"
+                  style={{
+                    backgroundColor: 'var(--primary)',
+                    color: 'white',
+                  }}
+                >
+                  Entrar
+                </Link>
+              </>
+            ) : (
+              <>
+                <span className="text-gray-600">Olá, {user?.name}</span>
+                <Button onClick={logout} variant="outline" size="sm">
+                  Sair
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>

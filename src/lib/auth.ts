@@ -5,6 +5,7 @@ import { RowDataPacket } from 'mysql2';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import type { JWT } from 'next-auth/jwt'
 import type { Session } from 'next-auth'
+import { NextRequest } from 'next/server';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change_this_secret';
 const JWT_EXPIRES = '7d';
@@ -136,4 +137,14 @@ export async function getUserFromToken(token: string): Promise<User | null> {
     return null;
   }
   return user;
+}
+
+// Helper function to extract token from request and get user
+export async function getUserFromRequest(request: NextRequest): Promise<User | null> {
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+  const token = authHeader.slice(7);
+  return getUserFromToken(token);
 }
