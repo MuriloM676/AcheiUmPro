@@ -54,15 +54,19 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white/10 backdrop-blur-lg rounded-xl shadow-2xl border border-white/20">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900">
+      <div className="max-w-md w-full space-y-8 p-8 bg-white/20 backdrop-blur-md rounded-xl shadow-lg border border-white/30">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
-            Entre na sua conta
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-100">
+            AcheiUmPro
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-400">
-            Acesse sua conta AcheiUmPro
+          <p className="mt-2 text-center text-sm text-gray-300">
+            Conectando você aos melhores profissionais
           </p>
+          <div className="mt-4 flex justify-center space-x-4">
+            <span className="text-xs text-gray-400 bg-gray-700/50 px-2 py-1 rounded">Cliente</span>
+            <span className="text-xs text-gray-400 bg-gray-700/50 px-2 py-1 rounded">Profissional</span>
+          </div>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4">
