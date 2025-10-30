@@ -41,14 +41,28 @@ DB_PASSWORD=acheipass
 DB_NAME=acheiumpro
 ```
 
-### Estrutura do Banco
+### Migrações e tabelas extras
+Há um script de migração que aplica os arquivos SQL em `initdb/` e garante colunas/tabelas esperadas (útil quando a branch principal adicionou campos):
 
-O banco possui as seguintes tabelas principais:
-- `users` — Usuários (clientes e profissionais)
-- `service_requests` — Solicitações de serviços criadas pelos clientes  
-- `service_proposals` — Propostas enviadas pelos profissionais
-- `notifications` — Sistema de notificações
-- `messages` — Chat entre cliente e profissional
+- `scripts/migrate_db.js` — aplica `initdb/init.sql` e `initdb/more_tables.sql`, e cria a coluna `users.status` se estiver faltando.
+
+Execute (no Windows PowerShell/cmd):
+
+```powershell
+# instale dependências se ainda não instalou
+npm install
+# rode a migração (usa .env.local para credenciais)
+node scripts/migrate_db.js
+```
+
+Se preferir aplicar manualmente, use o cliente mysql como descrito abaixo para `more_tables.sql`.
+
+### Estrutura do Banco
+- `users` — Usuários (clientes e profissionais). Agora inclui a coluna `status` (active/suspended).
+- `requests` / `service_requests` — Solicitações de serviços criadas pelos clientes  
+- `services` — Serviços oferecidos por um prestador
+- `notifications` — Sistema de notificações (mais_tables.sql)
+- `messages` — Chat entre cliente e profissional (mais_tables.sql)
 
 Como subir o MySQL (Docker)
 1) Certifique-se de que o Docker está rodando.
@@ -128,6 +142,12 @@ Execute `node scripts/test_api.js` para verificar se todos os endpoints estão f
 - **Não Logado**: Exibe "Buscar Profissionais", "Para Profissionais", "Cadastre-se", "Entrar"
 - **Logado**: Exibe "Dashboard", "Buscar", nome do usuário e "Sair"
 - **Dashboards**: Conteúdo limpo sem duplicação de cabeçalhos
+
+### Role-based redirects
+Após login, o frontend direciona o usuário ao dashboard correto baseado em seu `role`:
+- `client` → `/dashboard/client`
+- `provider` → `/dashboard/provider`
+- outros (admin) → `/dashboard`
 
 ### Dashboards Específicos
 - **Cliente** (`/dashboard/client`): Criar e gerenciar solicitações

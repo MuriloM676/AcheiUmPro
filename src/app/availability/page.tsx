@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import axios from 'axios'
-import { toast } from 'react-toastify'
-import { Button } from '@/components/Button'
+import api from '@/lib/api'
 import { useAuth } from '@/hooks/useAuth'
+import { Button } from '@/components/Button'
+import { toast } from 'react-toastify'
 
 interface AvailabilitySlot {
   id: number
@@ -42,7 +42,7 @@ export default function AvailabilityManagementPage() {
           return
         }
 
-        const provRes = await axios.get('/api/providers', { headers: { Authorization: `Bearer ${authToken}` } })
+        const provRes = await api.get('/api/providers', { headers: { Authorization: `Bearer ${authToken}` } })
         const myProvider = provRes.data.providers?.find((p: any) => p.user_id === user.id)
         if (!myProvider) {
           toast.error('Perfil de prestador não encontrado')
@@ -50,7 +50,7 @@ export default function AvailabilityManagementPage() {
         }
         setProviderId(myProvider.provider_id)
 
-        const availRes = await axios.get(`/api/availability?provider_id=${myProvider.provider_id}`)
+        const availRes = await api.get(`/api/availability?provider_id=${myProvider.provider_id}`)
         setSlots(availRes.data.availability || [])
       } catch (err: any) {
         toast.error(err.response?.data?.error || 'Erro ao carregar disponibilidade')
@@ -72,11 +72,11 @@ export default function AvailabilityManagementPage() {
         return
       }
 
-      await axios.post('/api/availability', { weekday: Number(newSlot.weekday), start_time: newSlot.start_time + ':00', end_time: newSlot.end_time + ':00' }, { headers: { Authorization: `Bearer ${authToken}` } })
+      await api.post('/api/availability', { weekday: Number(newSlot.weekday), start_time: newSlot.start_time + ':00', end_time: newSlot.end_time + ':00' }, { headers: { Authorization: `Bearer ${authToken}` } })
       toast.success('Horário adicionado')
       setShowAddModal(false)
       setNewSlot({ weekday: 1, start_time: '09:00', end_time: '17:00' })
-      const availRes = await axios.get(`/api/availability?provider_id=${providerId}`)
+      const availRes = await api.get(`/api/availability?provider_id=${providerId}`)
       setSlots(availRes.data.availability || [])
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Erro ao adicionar horário')
@@ -89,7 +89,7 @@ export default function AvailabilityManagementPage() {
     try {
       const authToken = token || localStorage.getItem('token')
       if (!authToken) return
-      await axios.delete('/api/availability', { headers: { Authorization: `Bearer ${authToken}` }, data: { id } })
+      await api.delete('/api/availability', { headers: { Authorization: `Bearer ${authToken}` }, data: { id } })
       toast.success('Horário removido')
       setSlots(slots.filter(s => s.id !== id))
     } catch (err: any) {

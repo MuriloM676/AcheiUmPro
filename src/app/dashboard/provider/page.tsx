@@ -3,11 +3,11 @@
 import { Button } from '@/components/Button'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/useAuth'
-import axios from 'axios'
+import api from '@/lib/api'
 import { toast } from 'react-toastify'
 
 export default function ProviderDashboard() {
-  const { user, logout } = useAuth({ requireAuth: true, allowedRoles: ['provider'] })
+  useAuth({ requireAuth: true, allowedRoles: ['provider'] })
   const [availableRequests, setAvailableRequests] = useState([])
   const [myJobs, setMyJobs] = useState([])
   const [selectedTab, setSelectedTab] = useState('available')
@@ -19,9 +19,7 @@ export default function ProviderDashboard() {
 
   const fetchAvailableRequests = async () => {
     try {
-      const response = await axios.get('/api/provider/requests', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      })
+      const response = await api.get('/api/provider/requests')
       setAvailableRequests(response.data)
     } catch (error) {
       console.error('Erro ao carregar solicitações:', error)
@@ -30,9 +28,7 @@ export default function ProviderDashboard() {
 
   const fetchMyJobs = async () => {
     try {
-      const response = await axios.get('/api/provider/jobs', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      })
+      const response = await api.get('/api/provider/jobs')
       setMyJobs(response.data)
     } catch (error) {
       console.error('Erro ao carregar meus trabalhos:', error)
@@ -41,11 +37,9 @@ export default function ProviderDashboard() {
 
   const handleAcceptRequest = async (requestId: number, proposedPrice: string) => {
     try {
-      await axios.post('/api/provider/accept', {
+      await api.post('/api/provider/accept', {
         requestId,
         proposedPrice
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       })
       toast.success('Proposta enviada com sucesso!')
       fetchAvailableRequests()

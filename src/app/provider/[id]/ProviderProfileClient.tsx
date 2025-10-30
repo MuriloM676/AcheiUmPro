@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import axios from 'axios'
+import api from '@/lib/api'
 import { toast } from 'react-toastify'
 import { Button } from '@/components/Button'
 import { useAuth } from '@/hooks/useAuth'
@@ -77,7 +77,7 @@ export function ProviderProfileClient({ providerId }: ProviderProfileClientProps
     async function fetchProvider() {
       try {
         setIsLoading(true)
-        const response = await axios.get<ApiResponse>(`/api/providers/${numericProviderId}`)
+        const response = await api.get<ApiResponse>(`/api/providers/${numericProviderId}`)
         if (!cancelled) {
           setData(response.data)
           setSelectedServiceId(response.data.services?.[0]?.id ?? null)
@@ -134,13 +134,11 @@ export function ProviderProfileClient({ providerId }: ProviderProfileClientProps
         return
       }
 
-      await axios.post('/api/requests', {
+      await api.post('/api/requests', {
         provider_id: data.provider.provider_id,
         service_id: selectedServiceId,
         description: requestDescription || null,
         scheduled_at: scheduledDate || null
-      }, {
-        headers: { Authorization: `Bearer ${authToken}` }
       })
 
       toast.success('Solicitação enviada para o prestador!')

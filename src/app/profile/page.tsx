@@ -2,7 +2,7 @@
 
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import axios from 'axios'
+import api from '@/lib/api'
 import { toast } from 'react-toastify'
 import { AuthGuard } from '@/components/AuthGuard'
 import { Button } from '@/components/Button'
@@ -53,9 +53,7 @@ function ProfileContent() {
 
       try {
         setLoading(true)
-        const { data } = await axios.get('/api/profile', {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+        const { data } = await api.get('/api/profile')
 
         const fetchedProfile: ProfilePayload = data.profile
         setProfile(fetchedProfile)
@@ -107,8 +105,8 @@ function ProfileContent() {
         payload.photo_url = formState.photo_url
       }
 
-      const { data } = await axios.put('/api/profile', payload, {
-        headers: { Authorization: `Bearer ${token}` }
+      const { data } = await api.put('/api/profile', payload, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       })
 
       const updatedProfile: ProfilePayload = data.profile
