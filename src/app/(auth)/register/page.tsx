@@ -60,7 +60,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-900 via-green-800 to-green-900 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900 py-12">
       <div className="max-w-md w-full space-y-8 p-8 bg-white/20 backdrop-blur-md rounded-xl shadow-lg border border-white/30">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-100">
@@ -77,7 +77,7 @@ export default function RegisterPage() {
             onClick={() => handleRoleChange('client')}
             className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
               selectedRole === 'client'
-                ? 'bg-blue-600 text-white'
+                ? 'bg-[var(--secondary-1)] text-white'
                 : 'text-gray-300 hover:text-white'
             }`}
           >
@@ -88,7 +88,7 @@ export default function RegisterPage() {
             onClick={() => handleRoleChange('provider')}
             className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
               selectedRole === 'provider'
-                ? 'bg-green-600 text-white'
+                ? 'bg-[var(--secondary-1)] text-white'
                 : 'text-gray-300 hover:text-white'
             }`}
           >
