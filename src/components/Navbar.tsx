@@ -10,44 +10,27 @@ export default function Navbar() {
   const { user, logout, isAuthenticated } = useAuth({ requireAuth: false });
 
   return (
-    <header className="border-b border-gray-200" style={{ backgroundColor: 'white' }}>
+    <header className={`header-container`}>
       <div className="container mx-auto px-4 py-3">
         <div className="flex justify-between items-center">
           {/* Logo */}
           <Link href="/" className="flex items-center">
-            <h1 className="text-2xl font-bold" style={{ color: 'var(--primary)' }}>AcheiUmPro</h1>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--secondary-1)' }}>AcheiUmPro</h1>
           </Link>
 
           {/* Menu principal */}
           <nav className="hidden md:flex space-x-8">
-            {!isAuthenticated && (
-              <>
-                <Link 
-                  href="/search"
-                  className={`text-gray-600 hover:text-primary ${pathname === '/search' ? 'font-medium' : ''}`}
-                >
-                  Buscar Profissionais
-                </Link>
-                <Link 
-                  href="/register" 
-                  className={`text-gray-600 hover:text-primary ${pathname === '/register' ? 'font-medium' : ''}`}
-                >
-                  Para Profissionais
-                </Link>
-              </>
-            )}
-            
             {isAuthenticated && (
               <>
                 <Link
                   href={user?.role === 'client' ? '/dashboard/client' : '/dashboard/provider'}
-                  className={`text-gray-600 hover:text-primary ${pathname?.includes('/dashboard') ? 'font-medium' : ''}`}
+                  className={`${pathname?.includes('/dashboard') ? 'font-medium' : ''} hover:text-[var(--secondary-1)]`}
                 >
                   Dashboard
                 </Link>
                 <Link
                   href="/search"
-                  className={`text-gray-600 hover:text-primary ${pathname === '/search' ? 'font-medium' : ''}`}
+                  className={`hover:text-[var(--secondary-1)] ${pathname === '/search' ? 'font-medium' : ''}`}
                 >
                   Buscar
                 </Link>
@@ -61,7 +44,8 @@ export default function Navbar() {
               <>
                 <Link
                   href="/register"
-                  className="text-gray-700 hover:text-primary font-medium"
+                  className="font-medium"
+                  style={{ color: 'var(--header-text)' }}
                 >
                   Cadastre-se
                 </Link>
@@ -69,7 +53,7 @@ export default function Navbar() {
                   href="/login"
                   className="px-4 py-2 rounded-md font-medium"
                   style={{
-                    backgroundColor: 'var(--primary)',
+                    backgroundColor: 'var(--secondary-1)',
                     color: 'white',
                   }}
                 >
@@ -78,7 +62,7 @@ export default function Navbar() {
               </>
             ) : (
               <>
-                <span className="text-gray-600">Olá, {user?.name}</span>
+                <span style={{ color: 'var(--header-text)' }}>Olá, {user?.name}</span>
                 <Button onClick={logout} variant="outline" size="sm">
                   Sair
                 </Button>

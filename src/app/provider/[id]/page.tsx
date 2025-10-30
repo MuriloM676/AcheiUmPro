@@ -1,9 +1,10 @@
 import { ProviderProfileClient } from './ProviderProfileClient'
 
 interface ProviderPageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
-export default function ProviderProfilePage({ params }: ProviderPageProps) {
-  return <ProviderProfileClient providerId={params.id} />
+export default async function ProviderProfilePage({ params }: ProviderPageProps) {
+  const resolved = await params
+  return <ProviderProfileClient providerId={resolved.id} />
 }

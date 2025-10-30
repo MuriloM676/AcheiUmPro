@@ -14,6 +14,30 @@
   --primary-dark: #4A3273;
   --accent-light: #58D2CC;
   --accent-dark: #28928C;
+
+  /* Header / Navbar */
+  --header-bg: #ffffff;
+  --header-text: var(--foreground);
+  --header-border: #E6E9F2;
+
+  /* Inputs */
+  --input-label-color: var(--foreground);
+  --input-bg: #ffffff;
+  --input-border: #E2E8F0; /* gray-200 */
+  --input-text: var(--foreground);
+}
+
+/* Dark theme variables for login and hero headers */
+.theme-dark {
+  --background: linear-gradient(135deg, #0f1724 0%, #0b1220 100%);
+  --foreground: #E6EEF8;
+  --header-bg: linear-gradient(90deg,#0b1220,#0f1724);
+  --header-text: #E6EEF8;
+  --header-border: rgba(255,255,255,0.06);
+  --input-label-color: #CBD5E1; /* tailwind slate-300 */
+  --input-bg: rgba(255,255,255,0.03);
+  --input-border: rgba(255,255,255,0.08);
+  --input-text: #F8FAFC;
 }
 
 @theme inline {
@@ -23,8 +47,8 @@
   --color-secondary-1: var(--secondary-1);
   --color-secondary-2: var(--secondary-2);
   --color-accent: var(--accent);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', 'Courier New', monospace;
 }
 
 body {
@@ -58,4 +82,18 @@ body {
 
 .btn-accent:hover {
   background-color: var(--accent-dark);
+}
+
+/* Small helpers for header */
+.header-container {
+  background: var(--header-bg);
+  color: var(--header-text);
+  border-bottom: 1px solid var(--header-border);
+}
+
+/* Input default styles when using CSS variables */
+.input-default {
+  background: var(--input-bg);
+  color: var(--input-text);
+  border: 1px solid var(--input-border);
 }
