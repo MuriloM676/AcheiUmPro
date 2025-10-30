@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/useAuth'
-import axios from 'axios'
+import api from '@/lib/api'
 import { toast } from 'react-toastify'
 
 const serviceRequestSchema = z.object({
@@ -46,9 +46,7 @@ export default function ClientDashboard() {
 
   const fetchRequests = async () => {
     try {
-      const response = await axios.get('/api/requests', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      })
+      const response = await api.get('/api/requests')
       setRequests(response.data)
     } catch (error) {
       console.error('Erro ao carregar solicitações:', error)
@@ -57,9 +55,7 @@ export default function ClientDashboard() {
 
   const onSubmit = async (data: ServiceRequestForm) => {
     try {
-      await axios.post('/api/requests', data, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      })
+      await api.post('/api/requests', data)
       toast.success('Solicitação criada com sucesso!')
       reset()
       setShowForm(false)

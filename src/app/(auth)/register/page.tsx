@@ -8,7 +8,7 @@ import { z } from 'zod'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import Link from 'next/link'
-import axios from 'axios'
+import api from '@/lib/api'
 import { toast } from 'react-toastify'
 
 const registerSchema = z.object({
@@ -41,7 +41,7 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterForm) => {
     try {
       setError('')
-      const response = await axios.post('/api/auth/register', data)
+      const response = await api.post('/api/auth/register', data)
 
       if (response.data.success) {
         toast.success('Conta criada com sucesso!')

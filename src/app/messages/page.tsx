@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import axios from 'axios'
+import api from '@/lib/api'
 import { useRouter } from 'next/navigation'
 import { toast } from 'react-toastify'
 import { AuthGuard } from '@/components/AuthGuard'
@@ -47,9 +47,7 @@ function MessagesContent() {
         return
       }
 
-      const { data } = await axios.get('/api/requests', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      const { data } = await api.get('/api/requests')
 
       const previews: ConversationPreview[] = (data.requests || []).map((request: any) => {
         let counterpartName = request.provider_name || request.client_name
@@ -97,9 +95,7 @@ function MessagesContent() {
   const loadMessages = async (requestId: number) => {
     try {
       if (!token) return
-      const { data } = await axios.get(`/api/messages/${requestId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      const { data } = await api.get(`/api/messages/${requestId}`)
       setMessages(data.messages || [])
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Erro ao carregar mensagens')
@@ -147,10 +143,8 @@ function MessagesContent() {
 
     try {
       setSending(true)
-      const { data } = await axios.post(`/api/messages/${selectedRequest}`, {
+      const { data } = await api.post(`/api/messages/${selectedRequest}`, {
         content: messageText.trim()
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       })
 
   setMessages((prev) => [...prev, data.message])

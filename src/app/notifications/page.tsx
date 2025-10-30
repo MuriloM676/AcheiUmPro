@@ -1,11 +1,11 @@
 'use client'
 
+import api from '@/lib/api'
 import { useEffect, useState } from 'react'
-import axios from 'axios'
+import { Button } from '@/components/Button'
 import { toast } from 'react-toastify'
 import { useRouter } from 'next/navigation'
 import { AuthGuard } from '@/components/AuthGuard'
-import { Button } from '@/components/Button'
 
 interface NotificationItem {
   id: number
@@ -26,22 +26,17 @@ function NotificationsContent() {
   const loadNotifications = async () => {
     try {
       setLoading(true)
-      const token = localStorage.getItem('token')
-      if (!token) {
+      // api interceptor will attach token; if not present, redirect to login
+      if (!localStorage.getItem('token')) {
         router.replace('/login')
         return
       }
 
-      const { data } = await axios.get('/api/notifications', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      const { data } = await api.get('/api/notifications')
 
-      setNotifications(data.notifications || [])
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Erro ao carregar notificações')
-      if (error.response?.status === 401) {
-        router.replace('/login')
-      }
+      setNotifications(data || [])
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Erro ao carregar notificações')
     } finally {
       setLoading(false)
     }
@@ -57,14 +52,11 @@ function NotificationsContent() {
 
     try {
       setMarking(true)
-      const token = localStorage.getItem('token')
-      await axios.patch('/api/notifications', { ids: unreadIds }, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      await loadNotifications()
+      await api.patch('/api/notifications', { ids: unreadIds })
+      setNotifications((prev) => prev.filter((n) => !unreadIds.includes(n.id)))
       toast.success('Notificações marcadas como lidas')
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Erro ao marcar notificações')
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Erro ao marcar notificações')
     } finally {
       setMarking(false)
     }

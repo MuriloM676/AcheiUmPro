@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import axios from 'axios'
+import api from '@/lib/api'
+import { Button } from '@/components/Button'
 import { toast } from 'react-toastify'
 import { AuthGuard } from '@/components/AuthGuard'
-import { Button } from '@/components/Button'
 
 interface Service {
   id: number
@@ -25,36 +25,20 @@ function ServicesContent() {
   const [servicePrice, setServicePrice] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
+  useEffect(() => {
+    loadServices()
+  }, [])
+
   const loadServices = async () => {
     try {
-      setLoading(true)
-      const authToken = localStorage.getItem('token')
-
-      if (!authToken) {
-        router.replace('/login')
-        return
-      }
-
-      const { data } = await axios.get('/api/services', {
-        headers: { Authorization: `Bearer ${authToken}` }
-      })
-
-      setServices(data.services || [])
-    } catch (err: any) {
-      if (err.response?.status === 401 || err.response?.status === 403) {
-        toast.error('Sessão expirada. Faça login novamente.')
-        router.replace('/login')
-      } else {
-        toast.error(err.response?.data?.error || 'Erro ao carregar serviços')
-      }
+      const { data } = await api.get('/api/services')
+      setServices(data || [])
+    } catch (err) {
+      console.error(err)
     } finally {
       setLoading(false)
     }
   }
-
-  useEffect(() => {
-    loadServices()
-  }, [])
 
   const handleOpenModal = (service?: Service) => {
     if (service) {
@@ -86,21 +70,16 @@ function ServicesContent() {
 
     try {
       setSubmitting(true)
-      const authToken = localStorage.getItem('token')
       const payload = {
         name: serviceName.trim(),
         price: servicePrice ? parseFloat(servicePrice) : null
       }
 
       if (editingService) {
-        await axios.patch(`/api/services/${editingService.id}`, payload, {
-          headers: { Authorization: `Bearer ${authToken}` }
-        })
+        await api.patch(`/api/services/${editingService.id}`, payload)
         toast.success('Serviço atualizado com sucesso')
       } else {
-        await axios.post('/api/services', payload, {
-          headers: { Authorization: `Bearer ${authToken}` }
-        })
+        await api.post('/api/services', payload)
         toast.success('Serviço criado com sucesso')
       }
 
@@ -119,10 +98,7 @@ function ServicesContent() {
     }
 
     try {
-      const authToken = localStorage.getItem('token')
-      await axios.delete(`/api/services/${serviceId}`, {
-        headers: { Authorization: `Bearer ${authToken}` }
-      })
+      await api.delete(`/api/services/${serviceId}`)
       toast.success('Serviço excluído com sucesso')
       loadServices()
     } catch (err: any) {

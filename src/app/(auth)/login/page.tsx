@@ -5,10 +5,9 @@ import { Input } from '@/components/Input'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import Link from 'next/link'
-import axios from 'axios'
+import api from '@/lib/api'
 import { toast } from 'react-toastify'
 
 const loginSchema = z.object({
@@ -19,20 +18,19 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>
 
 export default function LoginPage() {
-  const router = useRouter()
-  const [error, setError] = useState('')
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting }
-  } = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema)
-  })
+   const [error, setError] = useState('')
+   const {
+     register,
+     handleSubmit,
+     formState: { errors, isSubmitting }
+   } = useForm<LoginForm>({
+     resolver: zodResolver(loginSchema)
+   })
 
   const onSubmit = async (data: LoginForm) => {
     try {
       setError('')
-      const response = await axios.post('/api/auth/login', data)
+      const response = await api.post('/api/auth/login', data)
 
       if (response.data.token) {
         // Store token and user data
@@ -41,7 +39,14 @@ export default function LoginPage() {
 
         // Force redirect using window.location for immediate effect
         toast.success('Login realizado com sucesso!')
-        window.location.href = '/dashboard'
+        const role = response.data.user?.role
+        if (role === 'client') {
+          window.location.href = '/dashboard/client'
+        } else if (role === 'provider') {
+          window.location.href = '/dashboard/provider'
+        } else {
+          window.location.href = '/dashboard'
+        }
       } else {
         setError('Resposta inválida do servidor')
         toast.error('Resposta inválida do servidor')
