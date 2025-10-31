@@ -101,16 +101,9 @@ export default function RequestDetailPage({ params }: { params: { id: string } }
 
   return (
     <div className="max-w-4xl mx-auto py-8">
-      {/* DEV debug panel to inspect user and proposals when troubleshooting visibility */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
-          <div className="text-sm text-yellow-800 font-medium">DEBUG (dev only)</div>
-          <pre className="text-xs text-gray-700 mt-2">{JSON.stringify({ user, proposalProviderIds: proposals.map(p => p.provider_id), proposals }, null, 2)}</pre>
-        </div>
-      )}
       <h1 className="text-2xl font-bold mb-4 text-blue-700 flex items-center justify-between">
         <span>{request.title}</span>
-        {request.client_id === (user?.id ?? -1) && (
+        {user && request.client_id === user.id && (
           <Button variant="outline" onClick={deleteRequest} size="sm">Excluir Solicitação</Button>
         )}
       </h1>
@@ -132,14 +125,13 @@ export default function RequestDetailPage({ params }: { params: { id: string } }
                 <div className="text-xs text-gray-400 mt-1">{new Date(p.created_at).toLocaleString()}</div>
               </div>
               <div className="flex flex-col space-y-2">
-                {request.client_id === (user?.id ?? -1) && (
+                {user && request.client_id === user.id && (
                   <>
                     <Button onClick={() => handleAction(p.id, 'accept')} size="sm">Aceitar</Button>
                     <Button onClick={() => handleAction(p.id, 'reject')} variant="outline" size="sm">Rejeitar</Button>
                   </>
                 )}
-                {/* allow provider author (by id or email) or admin to delete the proposal */}
-                {user && ((user.id === p.provider_id) || (user.email && p.provider_email && user.email === p.provider_email) || (user.role === 'admin')) && (
+                {user && user.id === p.provider_id && (
                   <Button onClick={() => deleteProposal(p.id)} variant="outline" size="sm">Excluir</Button>
                 )}
                 <div className={`px-2 py-1 rounded text-sm ${p.status === 'accepted' ? 'bg-green-100 text-green-800' : p.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>{p.status}</div>
