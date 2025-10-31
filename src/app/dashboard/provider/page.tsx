@@ -53,6 +53,17 @@ export default function ProviderDashboard() {
     }
   }
 
+  const deleteProposal = async (proposalId: number) => {
+    if (!confirm('Deseja realmente excluir esta proposta?')) return
+    try {
+      await api.delete(`/api/proposals/${proposalId}`)
+      toast.success('Proposta excluída')
+      fetchMyJobs()
+    } catch (error) {
+      toast.error('Erro ao excluir proposta')
+    }
+  }
+
   const RequestCard = ({ request, isMyJob = false }: { request: any, isMyJob?: boolean }) => {
     const [showPriceForm, setShowPriceForm] = useState(false)
     const [proposedPrice, setProposedPrice] = useState('')
@@ -127,14 +138,25 @@ export default function ProviderDashboard() {
             )}
 
             {isMyJob && (
-              <span className={`px-3 py-1 rounded-full text-sm ${
-                request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                request.status === 'accepted' ? 'bg-green-100 text-green-800' :
-                'bg-gray-100 text-gray-800'
-              }`}>
-                {request.status === 'pending' ? 'Aguardando' :
-                 request.status === 'accepted' ? 'Aceito' : 'Finalizado'}
-              </span>
+              <div className="flex flex-col space-y-2">
+                <span className={`px-3 py-1 rounded-full text-sm text-center ${
+                  request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                  request.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {request.status === 'pending' ? 'Aguardando' :
+                   request.status === 'accepted' ? 'Aceito' : 'Finalizado'}
+                </span>
+                {request.proposalId && (
+                  <Button
+                    onClick={() => deleteProposal(request.proposalId)}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Excluir Proposta
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         </div>
