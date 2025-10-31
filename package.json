@@ -6,7 +6,8 @@
     "dev": "next dev -H 0.0.0.0",
     "build": "next build",
     "start": "next start -p 3000",
-    "seed": "node scripts/seed.js"
+    "seed": "node scripts/seed.js",
+    "setup:hooks": "node scripts/setup-hooks.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
