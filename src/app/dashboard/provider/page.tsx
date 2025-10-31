@@ -37,10 +37,14 @@ export default function ProviderDashboard() {
 
   const handleAcceptRequest = async (requestId: number, proposedPrice: string) => {
     try {
-      await api.post('/api/provider/accept', {
-        requestId,
-        proposedPrice
-      })
+      // Prefer RESTful endpoint under requests/{id}/proposals
+      try {
+        await api.post(`/api/requests/${requestId}/proposals`, { proposedPrice })
+      } catch (err) {
+        // fallback to older compatibility route
+        await api.post('/api/provider/accept', { requestId, proposedPrice })
+      }
+
       toast.success('Proposta enviada com sucesso!')
       fetchAvailableRequests()
       fetchMyJobs()
@@ -139,7 +143,7 @@ export default function ProviderDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-blue-50">
 
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">

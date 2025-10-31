@@ -1,0 +1,4 @@
+#!/bin/sh
+# Pre-commit hook to prevent committing directly to main or develop
+node ./scripts/check-branch.js
+
