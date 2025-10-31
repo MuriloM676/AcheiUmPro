@@ -9,12 +9,14 @@ Este repositório contém uma plataforma completa onde clientes podem solicitar 
 - Receber propostas de profissionais com preços
 - Escolher a melhor proposta e contratar o profissional
 - Acompanhar o status do serviço
+- Excluir suas próprias solicitações do dashboard
 
 ### Para Profissionais:
 - Ver solicitações disponíveis por categoria
 - Enviar propostas com preços personalizados
 - Gerenciar trabalhos aceitos
 - Histórico de serviços prestados
+- Excluir suas próprias propostas dos trabalhos
 
 ## Resumo Técnico
 - **Frontend**: Next.js 16 (React) com Tailwind CSS
@@ -168,6 +170,7 @@ Após login, o frontend direciona o usuário ao dashboard correto baseado em seu
 - `GET /api/requests` — Lista suas solicitações de serviço
 - `POST /api/requests` — Cria nova solicitação: `{ title, description, category, location, budget?, urgency }`
 - `GET /api/requests/[id]` — Detalhes da solicitação com propostas recebidas
+- `DELETE /api/requests/[id]` — Excluir solicitação (apenas o dono)
 
 ### Para Profissionais  
 - `GET /api/provider/requests` — Lista solicitações disponíveis (não respondidas)
@@ -178,6 +181,7 @@ Após login, o frontend direciona o usuário ao dashboard correto baseado em seu
 ### Propostas
 - `GET /api/requests/[id]/proposals` — Lista propostas de uma solicitação
 - `PATCH /api/proposals/[id]` — Aceitar/Rejeitar: `{ action: 'accept' | 'reject' }`
+- `DELETE /api/proposals/[id]` — Excluir proposta (apenas o autor da proposta)
 
 ### Gerais
 - `GET /api/notifications` — Notificações do usuário

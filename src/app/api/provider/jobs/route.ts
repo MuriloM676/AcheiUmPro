@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
     // Get jobs where this provider has submitted proposals
     const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT sr.*, sp.proposed_price, sp.status as proposal_status, u.name as client_name, u.phone as client_phone
+      `SELECT sr.*, sp.id as proposalId, sp.proposed_price, sp.status as proposal_status, u.name as client_name, u.phone as client_phone
        FROM service_proposals sp
        JOIN service_requests sr ON sp.request_id = sr.id
        JOIN users u ON sr.client_id = u.id

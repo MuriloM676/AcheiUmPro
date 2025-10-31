@@ -27,7 +27,7 @@ const categories = [
 ]
 
 export default function ClientDashboard() {
-  const { user, logout } = useAuth({ requireAuth: true, allowedRoles: ['client'] })
+  useAuth({ requireAuth: true, allowedRoles: ['client'] })
   const [requests, setRequests] = useState([])
   const [showForm, setShowForm] = useState(false)
 
@@ -50,6 +50,17 @@ export default function ClientDashboard() {
       setRequests(response.data)
     } catch (error) {
       console.error('Erro ao carregar solicitações:', error)
+    }
+  }
+
+  const deleteRequest = async (requestId: number) => {
+    if (!confirm('Deseja realmente excluir esta solicitação?')) return
+    try {
+      await api.delete(`/api/requests/${requestId}`)
+      toast.success('Solicitação excluída')
+      fetchRequests()
+    } catch (error) {
+      toast.error('Erro ao excluir solicitação')
     }
   }
 
@@ -189,14 +200,23 @@ export default function ClientDashboard() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className={`px-3 py-1 rounded-full text-sm ${
-                          request.status === 'pending' ? 'bg-blue-100 text-blue-800' :
-                          request.status === 'accepted' ? 'bg-green-100 text-green-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {request.status === 'pending' ? 'Aguardando' :
-                           request.status === 'accepted' ? 'Aceito' : 'Finalizado'}
-                        </span>
+                        <div className="flex flex-col space-y-2 items-end">
+                          <span className={`px-3 py-1 rounded-full text-sm ${
+                            request.status === 'pending' ? 'bg-blue-100 text-blue-800' :
+                            request.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {request.status === 'pending' ? 'Aguardando' :
+                             request.status === 'accepted' ? 'Aceito' : 'Finalizado'}
+                          </span>
+                          <Button
+                            onClick={() => deleteRequest(request.id)}
+                            variant="outline"
+                            size="sm"
+                          >
+                            Excluir
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
