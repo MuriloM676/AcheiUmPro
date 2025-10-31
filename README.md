@@ -32,7 +32,7 @@ Pré-requisitos
 
 O projeto usa MySQL 8.0 rodando em Docker. As credenciais estão configuradas no `docker-compose.yml`:
 
-```yaml
+```env
 # Credenciais do MySQL (Docker)
 DB_HOST=localhost
 DB_PORT=3306  
@@ -41,8 +41,10 @@ DB_PASSWORD=acheipass
 DB_NAME=acheiumpro
 ```
 
+> Observação: confirme as variáveis em `.env.local` antes de rodar a aplicação.
+
 ### Migrações e tabelas extras
-Há um script de migração que aplica os arquivos SQL em `initdb/` e garante colunas/tabelas esperadas (útil quando a branch principal adicionou campos):
+Há scripts e arquivos SQL para criar as tabelas principais e extras necessárias (por exemplo, `service_proposals`, `notifications`, `messages`, `appointments`). Use as ferramentas abaixo para aplicar as migrações quando precisar atualizar o schema.
 
 - `scripts/migrate_db.js` — aplica `initdb/init.sql` e `initdb/more_tables.sql`, e cria a coluna `users.status` se estiver faltando.
 
@@ -55,16 +57,17 @@ npm install
 node scripts/migrate_db.js
 ```
 
-Se preferir aplicar manualmente, use o cliente mysql como descrito abaixo para `more_tables.sql`.
+Se preferir aplicar manualmente, use o cliente mysql como descrito abaixo para `initdb/more_tables.sql`.
 
 ### Estrutura do Banco
 - `users` — Usuários (clientes e profissionais). Agora inclui a coluna `status` (active/suspended).
-- `requests` / `service_requests` — Solicitações de serviços criadas pelos clientes  
+- `requests` / `service_requests` — Solicitações de serviços criadas pelos clientes
+- `service_proposals` — Propostas enviadas por prestadores
 - `services` — Serviços oferecidos por um prestador
-- `notifications` — Sistema de notificações (mais_tables.sql)
-- `messages` — Chat entre cliente e profissional (mais_tables.sql)
+- `notifications` — Sistema de notificações (opcional, contido em `more_tables.sql`)
+- `messages` — Chat entre cliente e profissional (opcional)
 
-Como subir o MySQL (Docker)
+### Como subir o MySQL (Docker)
 1) Certifique-se de que o Docker está rodando.
 2) Inicie apenas o serviço de DB (docker compose):
 
@@ -74,7 +77,7 @@ docker compose up -d db
 
 Observação: o container inicializa o schema a partir de `initdb/init.sql` na primeira vez. Se quiser as tabelas extras (messages/notifications/appointments), aplique `initdb/more_tables.sql` manualmente (veja abaixo).
 
-Como aplicar `more_tables.sql` (opções)
+### Como aplicar `more_tables.sql` (opções)
 - Usando cliente MySQL (cmd/powershell):
 
 ```powershell
@@ -85,7 +88,7 @@ mysql -u <user> -p < "C:\Users\muril\Downloads\AcheiUmPro\initdb\more_tables.sql
 
 - Ou, abra `initdb/more_tables.sql` no seu gerenciador e execute o SQL.
 
-Como rodar o backend localmente
+## Como rodar o backend localmente
 1) Instalar dependências:
 
 ```powershell
@@ -100,7 +103,7 @@ npm install
 npm run dev
 ```
 
-Scripts úteis (na raiz)
+## Scripts úteis (na raiz)
 - `npm run dev` — inicia Next.js em modo dev
 - `npm run build` / `npm start` — build + start
 - `node scripts/seed_service_platform.js` — cria dados de teste da plataforma de serviços
@@ -121,6 +124,8 @@ Após executar o seed (`node scripts/seed_service_platform.js`), você pode faze
 - Email: `provider@example.com`
 - Senha: `password123`
 - Acesso: Dashboard do profissional para ver e aceitar solicitações
+
+> Se desejar, atualize os exemplos de credenciais no seed ou no arquivo `scripts/seed_service_platform.js`.
 
 ### Teste da API
 Execute `node scripts/test_api.js` para verificar se todos os endpoints estão funcionando:
@@ -166,8 +171,13 @@ Após login, o frontend direciona o usuário ao dashboard correto baseado em seu
 
 ### Para Profissionais  
 - `GET /api/provider/requests` — Lista solicitações disponíveis (não respondidas)
-- `POST /api/provider/accept` — Envia proposta: `{ requestId, proposedPrice }`
+- `POST /api/provider/accept` — Envia proposta: `{ requestId, proposedPrice }` (compat)
+- `POST /api/requests/[id]/proposals` — Envia proposta (RESTful): `{ proposedPrice, message? }`
 - `GET /api/provider/jobs` — Lista trabalhos onde enviou propostas
+
+### Propostas
+- `GET /api/requests/[id]/proposals` — Lista propostas de uma solicitação
+- `PATCH /api/proposals/[id]` — Aceitar/Rejeitar: `{ action: 'accept' | 'reject' }`
 
 ### Gerais
 - `GET /api/notifications` — Notificações do usuário
@@ -176,16 +186,16 @@ Após login, o frontend direciona o usuário ao dashboard correto baseado em seu
 Autenticação nas chamadas API (frontend)
 - Envie header: `Authorization: Bearer <token>` (token obtido no login). Algumas rotas NextAuth também usam cookies quando o frontend integra NextAuth diretamente.
 
-Comportamento atual (notas técnicas)
+## Comportamento atual (notas técnicas)
 - O backend agora trata cenários onde algumas tabelas não existem em ambientes dev (ex.: `messages` e `notifications`) — em ambiente sem as tabelas extras, endpoints retornam listas vazias ou códigos 503 para operações de escrita (mensagens) em vez de crashar.
 - Adicionei `queryWithRetry` (simples retry de 3 tentativas) para operações de DB críticas (mensagens, notificações, subscriptions) para reduzir erros transitórios no dev.
 
-Boas práticas para o desenvolvedor frontend
+## Boas práticas para o desenvolvedor frontend
 - Use o token Bearer retornado por `/api/auth/login` para chamadas de API nos testes locais.
 - Para testes completos de mensagens e notificações, certifique-se de aplicar `initdb/more_tables.sql` ou executar um DB de teste já com essas tabelas (o seed tenta inserir, mas pula inserções se a tabela não existir).
 - Quando usar WebPush/email/sms em dev, configure as variáveis VAPID e SMTP/Twilio no `.env.local`. Caso não tenha, o envio será ignorado (safely).
 
-Checklist antes de subir alterações front-end que dependem do backend
+## Checklist antes de subir alterações front-end que dependem do backend
 - [ ] Rodar `npm run seed` (ou aplicar `more_tables.sql`) para garantir que `messages` / `notifications` / `appointments` existam.
 - [ ] Iniciar o backend (`npm run dev`) e confirmar login com `client@example.com`.
 - [ ] Testar fluxos principais: criar request, enviar mensagem, aceitar request (PATCH), criar appointment.
@@ -207,4 +217,28 @@ Contribuição / Git workflow (sugestão)
 - Branches: `main` (produção), `develop` (integração); crie feature branches `feature/xxx` a partir de `develop`.
 - Faça PRs da branch de feature para `develop`. Quando `develop` estiver estável, abra PR para `main`.
 
-Se houver algo específico que o time de frontend precisa (component props, shape do JSON ou mocks), diga o que e eu ajusto o backend / README com exemplos de payload/response.
+## Git workflow e proteção local de branches
+
+Para evitar commits diretos em `main` ou `develop`, seguimos o fluxo onde todo trabalho é feito em feature branches.
+
+Regras:
+- Nunca commit ou push diretamente em `main` ou `develop`.
+- Crie uma branch com prefixo `feature/`, `fix/` ou `hotfix/` a partir de `develop` e abra PRs para `develop`.
+
+Habilitar hook local (uma vez por máquina de desenvolvimento):
+
+```powershell
+# a partir da raiz do projeto (Windows cmd/powershell)
+# configura o git para usar os hooks dentro do repositório
+git config core.hooksPath .githooks
+# torne o hook executável (em git bash ou WSL)
+# no Windows você pode apenas garantir que o node.exe esteja no PATH
+``` 
+
+O repositório já inclui um pré-commit hook em `.githooks/pre-commit` que impede commits quando você está em `main` ou `develop`. O hook roda `node ./scripts/check-branch.js`.
+
+Se precisar sobrescrever temporariamente, execute um commit com `--no-verify` (não recomendado):
+
+```powershell
+git commit -m "mensagem" --no-verify
+```

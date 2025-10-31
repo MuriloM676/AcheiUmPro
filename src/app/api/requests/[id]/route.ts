@@ -179,7 +179,18 @@ export async function GET(
       return NextResponse.json({ error: 'Not allowed' }, { status: 403 });
     }
 
-    return NextResponse.json({ request: requestRow });
+    // Fetch proposals for this request
+    const [proposalRows] = await pool.query<RowDataPacket[]>(
+      `SELECT sp.id, sp.request_id, sp.provider_id, sp.proposed_price, sp.message, sp.status, sp.created_at,
+              u.name AS provider_name, u.email AS provider_email
+         FROM service_proposals sp
+         JOIN users u ON u.id = sp.provider_id
+        WHERE sp.request_id = ?
+        ORDER BY sp.created_at DESC`,
+      [requestId]
+    );
+
+    return NextResponse.json({ request: requestRow, proposals: proposalRows });
   } catch (error) {
     console.error('Error fetching request details:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
