@@ -196,3 +196,56 @@ export async function GET(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// DELETE /api/requests/[id] - Delete a request (clients or admins)
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const authHeader = request.headers.get('authorization') || ''
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
+    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const user = await getUserFromToken(token)
+    if (!user) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+
+    const resolved = await params
+    const requestId = Number(resolved.id)
+    if (!requestId) return NextResponse.json({ error: 'Invalid request id' }, { status: 400 })
+
+    // Only client who owns the request or admin can delete
+    const [rows] = await pool.query<RowDataPacket[]>(`SELECT client_id FROM service_requests WHERE id = ? LIMIT 1`, [requestId])
+    if (!rows.length) return NextResponse.json({ error: 'Request not found' }, { status: 404 })
+
+    const clientId = rows[0].client_id
+    if (!(user.role === 'admin' || (user.role === 'client' && user.id === clientId))) {
+      return NextResponse.json({ error: 'Not allowed' }, { status: 403 })
+    }
+
+    // delete request (cascade should remove proposals if FK configured)
+    await pool.query<ResultSetHeader>(`DELETE FROM service_requests WHERE id = ?`, [requestId])
+
+    // optionally notify providers who had proposals
+    try {
+      const [prs] = await pool.query<RowDataPacket[]>(`SELECT provider_id FROM service_proposals WHERE request_id = ?`, [requestId])
+      for (const pr of prs) {
+        await triggerNotification({
+          userId: pr.provider_id,
+          title: 'Solicitação removida',
+          body: `A solicitação #${requestId} foi removida pelo cliente.`,
+          channels: ['in_app'],
+          metadata: { requestId }
+        })
+      }
+    } catch (err) {
+      // ignore notification errors
+      console.error('Failed to notify providers on request delete:', err)
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting request:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}

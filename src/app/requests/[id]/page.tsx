@@ -70,12 +70,42 @@ export default function RequestDetailPage({ params }: { params: { id: string } }
     }
   }
 
+  const deleteRequest = async () => {
+    if (!confirm('Deseja realmente excluir esta solicitação?')) return
+    try {
+      await api.delete(`/api/requests/${requestId}`)
+      toast.success('Solicitação excluída')
+      // redirect to dashboard or home
+      window.location.href = '/dashboard/client'
+    } catch (err) {
+      console.error(err)
+      toast.error('Erro ao excluir solicitação')
+    }
+  }
+
+  const deleteProposal = async (proposalId: number) => {
+    if (!confirm('Deseja realmente excluir esta proposta?')) return
+    try {
+      await api.delete(`/api/proposals/${proposalId}`)
+      toast.success('Proposta excluída')
+      fetchData()
+    } catch (err) {
+      console.error(err)
+      toast.error('Erro ao excluir proposta')
+    }
+  }
+
   if (loading) return <div>Carregando...</div>
   if (!request) return <div>Solicitação não encontrada</div>
 
   return (
     <div className="max-w-4xl mx-auto py-8">
-      <h1 className="text-2xl font-bold mb-4 text-blue-700">{request.title}</h1>
+      <h1 className="text-2xl font-bold mb-4 text-blue-700 flex items-center justify-between">
+        <span>{request.title}</span>
+        {request.client_id === Number(localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') as string).id : -1) && (
+          <Button variant="outline" onClick={deleteRequest} size="sm">Excluir Solicitação</Button>
+        )}
+      </h1>
       <p className="text-gray-700 mb-2">{request.description}</p>
       <div className="mb-4">
         <strong>Local:</strong> {request.location} • <strong>Categoria:</strong> {request.category}
@@ -99,6 +129,10 @@ export default function RequestDetailPage({ params }: { params: { id: string } }
                     <Button onClick={() => handleAction(p.id, 'accept')} size="sm">Aceitar</Button>
                     <Button onClick={() => handleAction(p.id, 'reject')} variant="outline" size="sm">Rejeitar</Button>
                   </>
+                )}
+                {/* allow provider author or admin to delete the proposal */}
+                {(Number(localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') as string).id : -1) === p.provider_id || (localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') as string).role : '') === 'admin') && (
+                  <Button onClick={() => deleteProposal(p.id)} variant="outline" size="sm">Excluir</Button>
                 )}
                 <div className={`px-2 py-1 rounded text-sm ${p.status === 'accepted' ? 'bg-green-100 text-green-800' : p.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>{p.status}</div>
               </div>
