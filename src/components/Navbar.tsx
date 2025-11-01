@@ -34,6 +34,20 @@ export default function Navbar() {
                 >
                   Buscar
                 </Link>
+                <Link
+                  href="/calendar"
+                  className={`hover:text-[var(--secondary-1)] ${pathname === '/calendar' ? 'font-medium' : ''}`}
+                >
+                  Calendário
+                </Link>
+                {user?.role === 'provider' && (
+                  <Link
+                    href="/analytics"
+                    className={`hover:text-[var(--secondary-1)] ${pathname === '/analytics' ? 'font-medium' : ''}`}
+                  >
+                    Analytics
+                  </Link>
+                )}
               </>
             )}
           </nav>

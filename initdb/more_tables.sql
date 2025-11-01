@@ -44,15 +44,18 @@ CREATE TABLE IF NOT EXISTS notification_subscriptions (
 -- Appointments table
 CREATE TABLE IF NOT EXISTS appointments (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  request_id INT NOT NULL UNIQUE,
-  provider_id INT NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  scheduled_date DATETIME NOT NULL,
   client_id INT NOT NULL,
-  scheduled_for DATETIME DEFAULT NULL,
-  status ENUM('confirmed','cancelled','completed') DEFAULT 'confirmed',
+  provider_id INT NOT NULL,
+  request_id INT DEFAULT NULL,
+  status ENUM('scheduled','completed','cancelled') DEFAULT 'scheduled',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (request_id) REFERENCES requests(id) ON DELETE CASCADE,
-  FOREIGN KEY (provider_id) REFERENCES providers(id) ON DELETE CASCADE,
-  FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE CASCADE
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (provider_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (request_id) REFERENCES service_requests(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Provider availability (recurring weekly slots)
@@ -63,7 +66,7 @@ CREATE TABLE IF NOT EXISTS provider_availability (
   start_time TIME NOT NULL,
   end_time TIME NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (provider_id) REFERENCES providers(id) ON DELETE CASCADE,
+  FOREIGN KEY (provider_id) REFERENCES users(id) ON DELETE CASCADE,
   INDEX (provider_id),
   INDEX (weekday)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
