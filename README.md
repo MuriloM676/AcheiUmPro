@@ -21,9 +21,13 @@ Este repositório contém uma plataforma completa onde clientes podem solicitar 
 ## Resumo Técnico
 - **Frontend**: Next.js 16 (React) com Tailwind CSS
 - **Backend**: Next.js API Routes
-- **Database**: MySQL 8.0 (Docker)
-- **Auth**: NextAuth + JWT personalizado
-- **Scripts**: Seed de dados, testes de fumaça
+- **Database**: MySQL 8.0 (Docker) com connection pooling e health checks
+- **Auth**: NextAuth + JWT personalizado com middleware de validação
+- **Error Handling**: Sistema centralizado de tratamento de erros
+- **Logging**: Sistema estruturado com níveis e contextos
+- **Quality**: Qodana code analysis + CI/CD pipelines
+- **Scripts**: Seed de dados, testes de fumaça, migrações automáticas
+- **Arquitetura**: TypeScript com tipagem completa, sistema de cache, validação de esquemas
 
 Pré-requisitos
 - Node.js >= 18
@@ -224,6 +228,13 @@ Contribuição / Git workflow (sugestão)
 ## Git workflow e proteção local de branches
 
 Para evitar commits diretos em `main` ou `develop`, seguimos o fluxo onde todo trabalho é feito em feature branches.
+
+## 📚 Documentação Adicional
+
+- **[Error Handling & Logging](docs/ERROR_HANDLING_LOGGING.md)** - Sistema de tratamento de erros e logs estruturados
+- **[Qodana Setup](docs/QODANA_SETUP.md)** - Configuração de análise de código
+- **[Git Workflow](GIT_WORKFLOW.md)** - Fluxo de trabalho com Git
+- **[Contributing](CONTRIBUTING.md)** - Guia de contribuição
 
 Regras:
 - Nunca commit ou push diretamente em `main` ou `develop`.
