@@ -32,8 +32,9 @@
 
 ---
 
-**Configurado em**: 2025-01-31
-**Versão do Qodana**: 2025.2
+**Configurado em**: 2025-01-31  
+**Versão do Qodana**: 2024.3  
+**Status**: ✅ Funcionando sem necessidade de token
 # Qodana Configuration Guide
 
 ## 📋 Overview
@@ -43,19 +44,21 @@ Este projeto está configurado com **Qodana** da JetBrains para análise automá
 ## 🚀 O que foi configurado
 
 ### 1. **Qodana Analysis** (`qodana.yaml`)
-- ✅ Linter: `jetbrains/qodana-js:2025.2`
+- ✅ Linter: `jetbrains/qodana-js:2024.3` (compatível com CLI)
 - ✅ Profile: `qodana.recommended`
 - ✅ Análise de TypeScript, React, Next.js
 - ✅ Verificação de segurança (SQL Injection, XSS, etc.)
 - ✅ Detecção de código duplicado
 - ✅ Análise de ESLint
+- ✅ **Funciona sem token** (modo limitado)
 
 ### 2. **GitHub Actions Workflows**
 
 #### **Qodana Workflow** (`.github/workflows/qodana.yml`)
 - Executa em todos os PRs para `main` e `develop`
-- Posta comentários automáticos nos PRs com problemas encontrados
-- Gera relatórios SARIF para integração com GitHub Security
+- **Non-blocking**: Não impede merge se falhar
+- Funciona mesmo sem `QODANA_TOKEN`
+- Gera relatórios SARIF quando bem-sucedido
 
 #### **CI/CD Pipeline** (`.github/workflows/ci.yml`)
 - Build do projeto
@@ -106,14 +109,17 @@ Os resultados são enviados para GitHub Security via SARIF, permitindo:
 - Status check obrigatório (falha se limites excedidos)
 - Integração com revisão de código
 
-## 🔐 Configuração de Segredos
+## 🔐 Configuração de Segredos (Opcional)
 
-Para habilitar todas as funcionalidades, configure no GitHub:
+**O Qodana funciona sem token!** Mas para recursos avançados:
 
 1. Acesse: `Settings` → `Secrets and variables` → `Actions`
-2. Adicione (opcional, mas recomendado):
+2. Adicione (opcional):
    - `QODANA_TOKEN`: Token do Qodana Cloud (gratuito)
      - Obtenha em: https://qodana.cloud/
+     - Benefícios: Mais recursos, histórico na nuvem, relatórios detalhados
+
+**Sem token**: Análise básica funciona perfeitamente!
 
 ## 📁 Arquivos excluídos da análise
 
