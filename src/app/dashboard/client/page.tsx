@@ -375,38 +375,6 @@ export default function ClientDashboard() {
                 </div>
               </div>
             )}
-                            request.urgency === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-green-100 text-green-800'
-                          }`}>
-                            {request.urgency === 'high' ? 'Urgente' :
-                             request.urgency === 'medium' ? 'Média' : 'Baixa'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="flex flex-col space-y-2 items-end">
-                          <span className={`px-3 py-1 rounded-full text-sm ${
-                            request.status === 'pending' ? 'bg-blue-100 text-blue-800' :
-                            request.status === 'accepted' ? 'bg-green-100 text-green-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {request.status === 'pending' ? 'Aguardando' :
-                             request.status === 'accepted' ? 'Aceito' : 'Finalizado'}
-                          </span>
-                          <Button
-                            onClick={() => deleteRequest(request.id)}
-                            variant="outline"
-                            size="sm"
-                          >
-                            Excluir
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
           </div>
         </div>
       </div>
