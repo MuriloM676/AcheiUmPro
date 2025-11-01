@@ -85,9 +85,17 @@ export default function ClientDashboard() {
             <h1 className="text-3xl font-bold text-gray-900 mb-6">Dashboard do Cliente</h1>
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold text-gray-900">Minhas Solicitações</h2>
-              <Button onClick={() => setShowForm(true)}>
-                Nova Solicitação
-              </Button>
+              <div className="flex gap-4">
+                <Button
+                  onClick={() => window.location.href = '/calendar'}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  Calendário
+                </Button>
+                <Button onClick={() => setShowForm(true)}>
+                  Nova Solicitação
+                </Button>
+              </div>
             </div>
 
             {showForm && (

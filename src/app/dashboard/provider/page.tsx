@@ -171,6 +171,23 @@ export default function ProviderDashboard() {
         <div className="px-4 py-6 sm:px-0">
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-gray-900 mb-6">Dashboard do Profissional</h1>
+
+            {/* Quick Actions */}
+            <div className="flex gap-4 mb-6">
+              <Button
+                onClick={() => window.location.href = '/calendar'}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                Calendário
+              </Button>
+              <Button
+                onClick={() => window.location.href = '/analytics'}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                Analytics
+              </Button>
+            </div>
+
             <div className="border-b border-gray-200">
               <nav className="-mb-px flex space-x-8">
                 <button
