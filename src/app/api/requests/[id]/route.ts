@@ -150,20 +150,11 @@ export async function GET(
     }
 
     const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT r.id, r.client_id, r.provider_id, r.service_id, r.status, r.scheduled_at, r.description, r.created_at,
-              c.name AS client_name, c.email AS client_email,
-              pu.name AS provider_name, pu.id AS provider_user_id, pu.phone AS provider_phone,
-              s.name AS service_name, s.price AS service_price,
-              pay.id AS payment_id, pay.status AS payment_status, pay.amount AS payment_amount, pay.checkout_url,
-              app.status AS appointment_status, app.scheduled_for
-         FROM requests r
-         JOIN users c ON c.id = r.client_id
-         JOIN providers p ON p.id = r.provider_id
-         JOIN users pu ON pu.id = p.user_id
-         LEFT JOIN services s ON s.id = r.service_id
-         LEFT JOIN appointments app ON app.request_id = r.id
-         LEFT JOIN payments pay ON pay.request_id = r.id
-        WHERE r.id = ?
+      `SELECT sr.id, sr.client_id, sr.title, sr.description, sr.category, sr.location, sr.budget, sr.urgency, sr.status, sr.created_at,
+              c.name AS client_name, c.email AS client_email, c.phone AS client_phone
+         FROM service_requests sr
+         JOIN users c ON c.id = sr.client_id
+        WHERE sr.id = ?
         LIMIT 1`,
       [requestId]
     );
@@ -173,7 +164,7 @@ export async function GET(
     }
 
     const requestRow = rows[0];
-    const allowed = user.role === 'admin' || user.id === requestRow.client_id || user.id === requestRow.provider_user_id;
+    const allowed = user.role === 'admin' || user.id === requestRow.client_id;
 
     if (!allowed) {
       return NextResponse.json({ error: 'Not allowed' }, { status: 403 });
@@ -182,7 +173,7 @@ export async function GET(
     // Fetch proposals for this request
     const [proposalRows] = await pool.query<RowDataPacket[]>(
       `SELECT sp.id, sp.request_id, sp.provider_id, sp.proposed_price, sp.message, sp.status, sp.created_at,
-              u.name AS provider_name, u.email AS provider_email
+              u.name AS provider_name, u.email AS provider_email, u.phone AS provider_phone
          FROM service_proposals sp
          JOIN users u ON u.id = sp.provider_id
         WHERE sp.request_id = ?
