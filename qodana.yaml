@@ -9,7 +9,8 @@ profile:
   name: qodana.recommended
 
 # Specify Qodana linter for analysis (JavaScript/TypeScript/React/Next.js)
-linter: jetbrains/qodana-js:2025.2
+# Using 2024.3 for CLI compatibility, or use community version if no token
+linter: jetbrains/qodana-js:2024.3
 
 # Bootstrap command to prepare environment
 bootstrap: npm ci --ignore-scripts
