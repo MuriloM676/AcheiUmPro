@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
-import { getUserFromToken } from '@/lib/auth'
+import { getUserFromRequest } from '@/lib/auth'
 import { RowDataPacket, ResultSetHeader } from 'mysql2'
 
 // PATCH /api/appointments/[id] - Update appointment status
@@ -10,7 +10,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params
-    const user = await getUserFromToken(request)
+    const user = await getUserFromRequest(request)
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -51,7 +51,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    const user = await getUserFromToken(request)
+    const user = await getUserFromRequest(request)
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

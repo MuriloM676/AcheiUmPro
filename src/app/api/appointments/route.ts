@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
-import { getUserFromToken } from '@/lib/auth'
+import { getUserFromRequest } from '@/lib/auth'
 import { RowDataPacket, ResultSetHeader } from 'mysql2'
 
 // GET /api/appointments - List user's appointments
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromToken(request)
+    const user = await getUserFromRequest(request)
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 // POST /api/appointments - Create new appointment
 export async function POST(request: NextRequest) {
   try {
-    const user = await getUserFromToken(request)
+    const user = await getUserFromRequest(request)
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
