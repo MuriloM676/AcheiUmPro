@@ -44,10 +44,11 @@ interface AvailabilityRow extends RowDataPacket {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const providerId = Number(params.id)
+    const { id } = await params
+    const providerId = Number(id)
 
     if (!providerId || Number.isNaN(providerId) || providerId <= 0) {
       return NextResponse.json({ error: 'Invalid provider id' }, { status: 400 })

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUserFromToken } from '@/lib/auth'
 import pool from '@/lib/db'
+import { RowDataPacket } from 'mysql2'
 
 export const runtime = 'nodejs'
 
@@ -20,9 +21,9 @@ export async function GET(request: NextRequest) {
 
     const unreadOnly = request.nextUrl.searchParams.get('status') === 'unread'
 
-    let rows = []
+    let rows: RowDataPacket[] = []
     try {
-      const [r] = await pool.query(
+      const [r] = await pool.query<RowDataPacket[]>(
         `SELECT id, channel, title, body, metadata, read_at, created_at
            FROM notifications
           WHERE user_id = ? ${unreadOnly ? 'AND read_at IS NULL' : ''}

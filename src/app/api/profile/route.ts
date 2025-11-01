@@ -78,7 +78,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const profile = await buildProfileForUser(user);
+    const profile = await buildProfileForUser({
+      ...user,
+      created_at: user.created_at?.toISOString() || new Date().toISOString()
+    });
 
     return NextResponse.json({ profile });
   } catch (error) {
@@ -181,7 +184,10 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Não foi possível atualizar o perfil.' }, { status: 500 });
     }
 
-    const updatedProfile = await buildProfileForUser(refreshedUser);
+    const updatedProfile = await buildProfileForUser({
+      ...refreshedUser,
+      created_at: refreshedUser.created_at?.toISOString() || new Date().toISOString()
+    });
 
     return NextResponse.json({ profile: updatedProfile });
   } catch (error) {

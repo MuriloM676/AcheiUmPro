@@ -6,20 +6,11 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import type { JWT } from 'next-auth/jwt'
 import type { Session } from 'next-auth'
 import { NextRequest } from 'next/server';
+import { User } from '@/types';
+import { logger } from '@/lib/utils';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change_this_secret';
 const JWT_EXPIRES = '7d';
-
-export interface User {
-  id: number;
-  name: string;
-  email: string;
-  role: 'client' | 'provider' | 'admin';
-  phone?: string | null;
-  location?: string | null;
-  created_at?: string;
-  status?: 'active' | 'suspended';
-}
 
 export const authOptions = {
   providers: [
@@ -61,7 +52,7 @@ export const authOptions = {
             role: user.role,
           };
         } catch (error) {
-          console.error('Auth error:', error);
+          logger.error('Auth error:', error);
           return null;
         }
       }
