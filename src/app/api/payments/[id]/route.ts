@@ -6,8 +6,9 @@ import { triggerNotification } from '@/lib/notifications'
 
 export const runtime = 'nodejs'
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const authHeader = request.headers.get('authorization') || ''
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
 
@@ -20,7 +21,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    const paymentId = Number(params.id)
+    const paymentId = Number((await params).id)
     if (!paymentId || Number.isNaN(paymentId)) {
       return NextResponse.json({ error: 'Invalid payment id' }, { status: 400 })
     }

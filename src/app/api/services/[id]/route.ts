@@ -8,9 +8,10 @@ export const runtime = 'nodejs';
 // PATCH /api/services/[id] - Update service
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const authHeader = request.headers.get('authorization') || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
     
@@ -49,7 +50,7 @@ export async function PATCH(
     // Update service only if it belongs to this provider
     const [result] = await pool.query<ResultSetHeader>(
       'UPDATE services SET name = ?, price = ? WHERE id = ? AND provider_id = ?',
-      [name.trim(), price || null, params.id, providerId]
+      [name.trim(), price || null, id, providerId]
     );
 
     if (result.affectedRows === 0) {
@@ -66,9 +67,10 @@ export async function PATCH(
 // DELETE /api/services/[id] - Delete service
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const authHeader = request.headers.get('authorization') || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
     
@@ -100,7 +102,7 @@ export async function DELETE(
     // Delete service only if it belongs to this provider
     const [result] = await pool.query<ResultSetHeader>(
       'DELETE FROM services WHERE id = ? AND provider_id = ?',
-      [params.id, providerId]
+      [(await params).id, providerId]
     );
 
     if (result.affectedRows === 0) {
