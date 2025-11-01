@@ -34,6 +34,20 @@ export default function RequestDetailPage({ params }: { params: { id: string } }
     }
   }
 
+  const markCompleted = async () => {
+    if (!confirm('Deseja marcar esse serviço como concluído?')) return
+    try {
+      await api.patch(`/api/requests/${requestId}`, { status: 'completed' })
+      toast.success('Solicitação marcada como concluída')
+      fetchData()
+      // optionally redirect to history or reviews
+      setTimeout(() => window.location.reload(), 500)
+    } catch (err) {
+      console.error(err)
+      toast.error('Erro ao marcar como concluído')
+    }
+  }
+
   const submitProposal = async () => {
     if (!proposedPrice) return toast.error('Digite um preço')
     try {
@@ -103,9 +117,16 @@ export default function RequestDetailPage({ params }: { params: { id: string } }
     <div className="max-w-4xl mx-auto py-8">
       <h1 className="text-2xl font-bold mb-4 text-blue-700 flex items-center justify-between">
         <span>{request.title}</span>
-        {user && request.client_id === user.id && (
-          <Button variant="outline" onClick={deleteRequest} size="sm">Excluir Solicitação</Button>
-        )}
+        <div className="flex items-center space-x-2">
+          {user && request.client_id === user.id && (
+            <>
+              <Button variant="outline" onClick={deleteRequest} size="sm">Excluir Solicitação</Button>
+              {request.status !== 'completed' && (
+                <Button onClick={markCompleted} className="bg-blue-600 text-white" size="sm">Marcar como Concluído</Button>
+              )}
+            </>
+          )}
+        </div>
       </h1>
       <p className="text-gray-700 mb-2">{request.description}</p>
       <div className="mb-4">

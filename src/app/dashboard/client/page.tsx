@@ -371,6 +371,24 @@ export default function ClientDashboard() {
                         ))}
                       </div>
                     )}
+
+                    {/* Add completion button below proposals list when a proposal was accepted or request in progress */}
+                    {selectedRequest && selectedRequest.status !== 'completed' && (
+                      <div className="p-4 border-t border-gray-100 flex justify-end">
+                        <Button onClick={async () => {
+                          if (!confirm('Deseja marcar este serviço como concluído?')) return
+                          try {
+                            await api.patch(`/api/requests/${selectedRequest.id}`, { status: 'completed' })
+                            toast.success('Solicitação marcada como concluída')
+                            setSelectedRequest(null)
+                            setProposals([])
+                            fetchRequests()
+                          } catch (err) {
+                            toast.error('Erro ao marcar como concluído')
+                          }
+                        }} className="bg-blue-600 text-white">Marcar como Concluído</Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

@@ -6,7 +6,7 @@ import { RowDataPacket, ResultSetHeader } from 'mysql2';
 
 export const runtime = 'nodejs';
 
-// PATCH /api/requests/[id] - Update request status (providers only)
+// PATCH /api/requests/[id] - Update request status (providers only or client to complete)
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -24,19 +24,39 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    if (user.role !== 'provider' && user.role !== 'admin') {
-      return NextResponse.json({ error: 'Only providers or admins can update requests' }, { status: 403 });
-    }
-
     const body = await request.json();
     const { status, scheduled_at } = body;
 
-    if (!status || !['pending', 'accepted', 'rejected', 'completed'].includes(status)) {
+    if (!status || !['pending', 'accepted', 'rejected', 'completed', 'in_progress'].includes(status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
     }
 
     const resolvedParams = await params;
     const requestId = Number(resolvedParams.id);
+
+    if (!requestId || Number.isNaN(requestId)) {
+      return NextResponse.json({ error: 'Invalid request id' }, { status: 400 });
+    }
+
+    // If client is marking as completed, ensure they own the request
+    if (status === 'completed' && user.role === 'client') {
+      const [rows] = await pool.query<RowDataPacket[]>(`SELECT client_id FROM service_requests WHERE id = ? LIMIT 1`, [requestId]);
+      if (!rows.length) return NextResponse.json({ error: 'Request not found' }, { status: 404 });
+      const clientId = rows[0].client_id;
+      if (clientId !== user.id) return NextResponse.json({ error: 'Not allowed' }, { status: 403 });
+
+      await pool.query<ResultSetHeader>(`UPDATE service_requests SET status = ? WHERE id = ?`, [status, requestId]);
+
+      // mark related appointment as completed if exists
+      await pool.query(`UPDATE appointments SET status = 'completed' WHERE request_id = ?`, [requestId]);
+
+      return NextResponse.json({ message: 'Request marked as completed' });
+    }
+
+    // Providers or admins update flow (assign/accept/reject)
+    if (user.role !== 'provider' && user.role !== 'admin') {
+      return NextResponse.json({ error: 'Only providers or admins can update requests' }, { status: 403 });
+    }
 
     let providerId: number | null = null;
 
@@ -53,9 +73,9 @@ export async function PATCH(
       providerId = providerRows[0].id;
     }
 
-    // Update request only if it belongs to this provider
+    // Update request only if it belongs to this provider when providerId is set
     const [result] = await pool.query<ResultSetHeader>(
-      `UPDATE requests
+      `UPDATE service_requests
           SET status = ?,
               scheduled_at = COALESCE(?, scheduled_at)
         WHERE id = ? ${providerId ? 'AND provider_id = ?' : ''}`,
@@ -69,13 +89,13 @@ export async function PATCH(
     }
 
     const [contextRows] = await pool.query<RowDataPacket[]>(
-      `SELECT r.id, r.client_id, r.provider_id, u.email AS client_email, u.name AS client_name,
+      `SELECT sr.id, sr.client_id, sr.provider_id, u.email AS client_email, u.name AS client_name,
               p.user_id AS provider_user_id, pu.name AS provider_name
-         FROM requests r
-         JOIN users u ON u.id = r.client_id
-         JOIN providers p ON p.id = r.provider_id
-         JOIN users pu ON pu.id = p.user_id
-        WHERE r.id = ?
+         FROM service_requests sr
+         LEFT JOIN users u ON u.id = sr.client_id
+         LEFT JOIN providers p ON p.id = sr.provider_id
+         LEFT JOIN users pu ON pu.id = p.user_id
+        WHERE sr.id = ?
         LIMIT 1`,
       [requestId]
     );
