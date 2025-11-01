@@ -5,8 +5,9 @@ import { ResultSetHeader } from 'mysql2'
 
 export const runtime = 'nodejs'
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const authHeader = request.headers.get('authorization') || ''
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
 
@@ -19,7 +20,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       return NextResponse.json({ error: 'Not allowed' }, { status: 403 })
     }
 
-    const verificationId = Number(params.id)
+    const verificationId = Number(id)
     if (!verificationId || Number.isNaN(verificationId)) {
       return NextResponse.json({ error: 'Invalid verification id' }, { status: 400 })
     }

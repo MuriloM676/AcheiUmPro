@@ -5,8 +5,9 @@ import { ResultSetHeader } from 'mysql2'
 
 export const runtime = 'nodejs'
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const authHeader = request.headers.get('authorization') || ''
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
 
@@ -19,7 +20,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ error: 'Not allowed' }, { status: 403 })
     }
 
-    const reviewId = Number(params.id)
+    const reviewId = Number(id)
     if (!reviewId || Number.isNaN(reviewId)) {
       return NextResponse.json({ error: 'Invalid review id' }, { status: 400 })
     }
