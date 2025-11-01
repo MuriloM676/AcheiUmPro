@@ -11,9 +11,15 @@ export async function GET(request: NextRequest) {
     }
 
     if (user.role === 'client') {
-      // Get client's own requests
+      // Get client's own requests with proposal count
       const [rows] = await pool.query<RowDataPacket[]>(
-        `SELECT * FROM service_requests WHERE client_id = ? ORDER BY created_at DESC`,
+        `SELECT sr.*, 
+         COUNT(sp.id) as proposalCount
+         FROM service_requests sr
+         LEFT JOIN service_proposals sp ON sr.id = sp.request_id
+         WHERE sr.client_id = ?
+         GROUP BY sr.id
+         ORDER BY sr.created_at DESC`,
         [user.id]
       )
       return NextResponse.json(rows)
