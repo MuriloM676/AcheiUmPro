@@ -1,0 +1,28 @@
+# CODEOWNERS - Define who reviews code in specific areas
+# Learn more: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything in the repo
+* @MuriloM676
+
+# API routes require careful review
+/src/app/api/ @MuriloM676
+
+# Database migrations and schemas
+/initdb/ @MuriloM676
+/scripts/*_tables.js @MuriloM676
+/scripts/migrate_db.js @MuriloM676
+
+# Authentication and security critical files
+/src/lib/auth.ts @MuriloM676
+/src/app/api/auth/ @MuriloM676
+
+# Configuration files
+/.github/ @MuriloM676
+/qodana.yaml @MuriloM676
+/package.json @MuriloM676
+/tsconfig.json @MuriloM676
+/next.config.* @MuriloM676
+
+# Environment and secrets (should not be committed, but just in case)
+.env* @MuriloM676
+

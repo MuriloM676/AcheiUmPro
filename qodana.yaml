@@ -1,0 +1,84 @@
+#-------------------------------------------------------------------------------#
+#               Qodana analysis is configured by qodana.yaml file               #
+#             https://www.jetbrains.com/help/qodana/qodana-yaml.html            #
+#-------------------------------------------------------------------------------#
+version: "1.0"
+
+# Specify inspection profile for code analysis
+profile:
+  name: qodana.recommended
+
+# Specify Qodana linter for analysis (JavaScript/TypeScript/React/Next.js)
+linter: jetbrains/qodana-js:2025.2
+
+# Bootstrap command to prepare environment
+bootstrap: npm ci --ignore-scripts
+
+# Install IDE plugins for better analysis
+plugins:
+  - id: com.intellij.database
+
+# Quality gate - fail pipeline if thresholds exceeded
+failureConditions:
+  severityThresholds:
+    any: 100        # Total problems allowed
+    critical: 5     # Critical issues allowed
+    high: 15        # High severity issues allowed
+    moderate: 30    # Moderate severity issues allowed
+    low: 50         # Low severity issues allowed
+
+# Exclude only generated/vendor files from analysis
+exclude:
+  - name: All
+    paths:
+      # Build outputs and dependencies
+      - .next/
+      - node_modules/
+      - out/
+      - dist/
+      - build/
+
+      # Environment and config files
+      - "*.env*"
+      - ".env"
+      - ".env.*"
+
+      # Lock files
+      - package-lock.json
+      - yarn.lock
+      - pnpm-lock.yaml
+
+      # Generated type definitions
+      - next-env.d.ts
+
+      # Docker and CI artifacts
+      - .docker/
+      - coverage/
+
+# Enable specific inspections for Next.js/React/TypeScript
+include:
+  # TypeScript specific
+  - name: TypeScriptUnresolvedReference
+  - name: TypeScriptValidateTypes
+  - name: TypeScriptUnresolvedVariable
+
+  # React/Next.js specific
+  - name: JSXNamespaceValidation
+  - name: JSUnusedGlobalSymbols
+  - name: JSUnusedLocalSymbols
+
+  # Code quality
+  - name: Eslint
+  - name: DuplicatedCode
+  - name: BadExpressionStatementJS
+
+  # Security
+  - name: InsecureRandomness
+  - name: SqlInjection
+  - name: XSSVulnerabilities
+
+# Disable noisy inspections
+# exclude:
+#   - name: JSUnusedGlobalSymbols
+#     paths:
+#       - "**/*.d.ts"
