@@ -146,6 +146,259 @@ Execute `node scripts/test_api.js` para verificar se todos os endpoints estão f
 3. Login como cliente → Ver proposta recebida → Aceitar profissional
 4. Sistema de mensagens entre cliente e profissional
 
+## Próximas Fases de Desenvolvimento
+
+### Fase 1: Finalização do Serviço e Avaliações ⭐ (PRÓXIMA)
+**Objetivo**: Permitir que o serviço seja finalizado e avaliado após conclusão
+
+**Funcionalidades**:
+- [ ] **Sistema de Conclusão de Serviço**
+  - Cliente pode marcar serviço como concluído
+  - Prestador pode confirmar conclusão
+  - Status muda de "Em Andamento" para "Concluído"
+  
+- [ ] **Sistema de Avaliações (Reviews)**
+  - Cliente avalia o prestador (1-5 estrelas + comentário)
+  - Prestador avalia o cliente (opcional)
+  - Histórico de avaliações no perfil
+  - Cálculo de média de avaliações
+  - Badge de prestador bem avaliado
+
+- [ ] **Histórico de Serviços**
+  - Visualização de serviços concluídos
+  - Filtros por status, data, categoria
+  - Exportação de histórico (PDF/Excel)
+
+**Endpoints a criar**:
+- `PATCH /api/requests/[id]/complete` - Marcar como concluído
+- `POST /api/reviews` - Criar avaliação
+- `GET /api/reviews/provider/[id]` - Avaliações do prestador
+- `GET /api/requests/history` - Histórico de serviços
+
+### Fase 2: Sistema de Mensagens em Tempo Real 💬
+**Objetivo**: Comunicação eficiente entre cliente e prestador
+
+**Funcionalidades**:
+- [ ] **Chat em Tempo Real**
+  - WebSocket ou Server-Sent Events
+  - Mensagens instantâneas entre cliente e prestador
+  - Indicador de "digitando..."
+  - Notificação de mensagens não lidas
+  
+- [ ] **Anexos e Mídias**
+  - Upload de fotos do problema/serviço
+  - Compartilhamento de localização
+  - Envio de documentos
+  
+- [ ] **Interface de Chat**
+  - Lista de conversas ativas
+  - Histórico completo de mensagens
+  - Busca dentro das conversas
+
+**Tecnologias**:
+- Socket.io ou Pusher para real-time
+- Upload: AWS S3, Cloudinary ou storage local
+- Tabela `messages` já existe no banco
+
+### Fase 3: Sistema de Pagamentos 💰
+**Objetivo**: Processar pagamentos de forma segura
+
+**Funcionalidades**:
+- [ ] **Integração com Gateway de Pagamento**
+  - Stripe ou Mercado Pago
+  - PIX, Cartão de Crédito, Boleto
+  - Split payment (plataforma + prestador)
+  
+- [ ] **Fluxo de Pagamento**
+  - Cliente paga ao aceitar proposta ou após conclusão
+  - Valor fica retido até confirmação do serviço
+  - Liberação automática após avaliação
+  
+- [ ] **Gestão Financeira**
+  - Dashboard financeiro para prestadores
+  - Histórico de transações
+  - Relatórios de ganhos
+  - Solicitação de saque
+
+**Endpoints a criar**:
+- `POST /api/payments/create` - Criar pagamento
+- `POST /api/payments/webhook` - Webhook do gateway
+- `GET /api/payments/history` - Histórico
+- `POST /api/withdrawals` - Solicitar saque
+
+### Fase 4: Agendamento e Calendário 📅
+**Objetivo**: Melhorar gestão de horários e disponibilidade
+
+**Funcionalidades**:
+- [ ] **Calendário do Prestador**
+  - Definir disponibilidade por dia/horário
+  - Bloqueio de datas indisponíveis
+  - Visualização de agenda mensal/semanal
+  
+- [ ] **Sistema de Agendamento**
+  - Cliente escolhe data/hora ao criar solicitação
+  - Prestador confirma ou sugere outro horário
+  - Lembretes automáticos (24h antes)
+  - Integração com Google Calendar
+  
+- [ ] **Gestão de Conflitos**
+  - Detectar sobreposição de agendamentos
+  - Sugestão de horários alternativos
+  - Reagendamento fácil
+
+**Tabelas necessárias**:
+- `availability` - Disponibilidade do prestador
+- `appointments` - Agendamentos (já existe)
+
+### Fase 5: Busca Avançada e Filtros 🔍
+**Objetivo**: Melhorar descoberta de profissionais
+
+**Funcionalidades**:
+- [ ] **Busca Inteligente**
+  - Busca por categoria, localização, preço
+  - Filtro por avaliação mínima
+  - Ordenação (melhor avaliado, menor preço, mais próximo)
+  - Busca por palavra-chave
+  
+- [ ] **Geolocalização**
+  - Busca por raio de distância
+  - Mapa com prestadores próximos
+  - Cálculo de distância até o cliente
+  
+- [ ] **Perfis Detalhados**
+  - Portfólio do prestador (fotos de trabalhos)
+  - Certificações e documentos
+  - Anos de experiência
+  - Especialidades
+
+**Tecnologias**:
+- Elasticsearch ou Algolia para busca
+- Google Maps API para geolocalização
+- Cloudinary para galeria de imagens
+
+### Fase 6: Notificações Push e Email 🔔
+**Objetivo**: Manter usuários engajados e informados
+
+**Funcionalidades**:
+- [ ] **Notificações Web Push**
+  - Nova proposta recebida
+  - Proposta aceita/rejeitada
+  - Nova mensagem no chat
+  - Lembrete de agendamento
+  
+- [ ] **Notificações por Email**
+  - Email de boas-vindas
+  - Resumo semanal de atividades
+  - Alerta de solicitações próximas ao prestador
+  - Newsletter com dicas
+  
+- [ ] **Notificações SMS** (opcional)
+  - Confirmação de agendamento
+  - Lembrete 1h antes do serviço
+
+**Serviços**:
+- Web Push: OneSignal ou Firebase
+- Email: SendGrid, Mailgun ou Amazon SES
+- SMS: Twilio
+
+### Fase 7: Dashboard Admin e Analytics 📊
+**Objetivo**: Ferramentas para gestão da plataforma
+
+**Funcionalidades**:
+- [ ] **Painel Administrativo**
+  - Gestão de usuários (suspender, ativar)
+  - Moderação de avaliações
+  - Gestão de categorias de serviços
+  - Resolução de disputas
+  
+- [ ] **Analytics e Métricas**
+  - Total de usuários ativos
+  - Solicitações por categoria
+  - Taxa de conversão (solicitação → contratação)
+  - Receita da plataforma
+  - Gráficos e relatórios
+  
+- [ ] **Sistema de Suporte**
+  - Tickets de suporte
+  - Chat ao vivo com admin
+  - Base de conhecimento (FAQ)
+
+### Fase 8: Mobile App 📱
+**Objetivo**: Aplicativo nativo para melhor experiência
+
+**Funcionalidades**:
+- [ ] **App React Native ou Flutter**
+  - Todas as funcionalidades web
+  - Notificações push nativas
+  - Câmera para fotos in-app
+  - Geolocalização em tempo real
+  
+- [ ] **Features Mobile-First**
+  - Modo offline (cache de dados)
+  - Biometria para login
+  - Compartilhamento rápido
+  - Deep links
+
+### Fase 9: Melhorias de Performance e Segurança 🔒
+**Objetivo**: Otimização e proteção da plataforma
+
+**Funcionalidades**:
+- [ ] **Performance**
+  - Cache com Redis
+  - CDN para assets estáticos
+  - Lazy loading de imagens
+  - Server-Side Rendering otimizado
+  
+- [ ] **Segurança**
+  - Rate limiting nas APIs
+  - Validação rigorosa de inputs
+  - Sanitização de uploads
+  - Auditoria de ações sensíveis
+  - 2FA para login
+  
+- [ ] **Testes**
+  - Testes unitários (Jest)
+  - Testes E2E (Playwright/Cypress)
+  - Testes de carga (k6)
+  - Coverage > 80%
+
+### Fase 10: Features Premium e Monetização 💎
+**Objetivo**: Gerar receita sustentável
+
+**Funcionalidades**:
+- [ ] **Planos Premium para Prestadores**
+  - Destaque em buscas
+  - Selo de verificado
+  - Mais propostas simultâneas
+  - Analytics avançado
+  
+- [ ] **Sistema de Comissões**
+  - Taxa da plataforma por serviço
+  - Assinatura mensal para prestadores
+  - Pacotes de créditos para clientes
+  
+- [ ] **Programa de Indicação**
+  - Cliente indica prestador (bônus)
+  - Prestador indica cliente
+  - Descontos progressivos
+
+---
+
+## Roadmap Resumido
+
+| Fase | Foco | Prioridade | Tempo Estimado |
+|------|------|------------|----------------|
+| 1 | Avaliações e Conclusão | 🔥 Alta | 1-2 semanas |
+| 2 | Chat em Tempo Real | 🔥 Alta | 2-3 semanas |
+| 3 | Pagamentos | ⚡ Média | 3-4 semanas |
+| 4 | Agendamento | ⚡ Média | 2 semanas |
+| 5 | Busca Avançada | ⚡ Média | 2-3 semanas |
+| 6 | Notificações | ✅ Baixa | 1-2 semanas |
+| 7 | Admin Dashboard | ✅ Baixa | 3 semanas |
+| 8 | Mobile App | 📅 Futura | 6-8 semanas |
+| 9 | Performance/Segurança | 📅 Contínua | Ongoing |
+| 10 | Monetização | 📅 Futura | 2-3 semanas |
+
 ## Interface e Navegação
 
 ### Navegação Unificada
