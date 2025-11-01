@@ -17,13 +17,42 @@ Este repositório contém uma plataforma completa onde clientes podem solicitar 
 - Gerenciar trabalhos aceitos
 - Histórico de serviços prestados
 - Excluir suas próprias propostas dos trabalhos
+- Dashboard Analytics com métricas de performance e ganhos
+- Sistema de calendário para agendamentos
+
+## Melhorias Recentes e Otimizações
+
+### 🔧 **Infraestrutura e Performance**
+- **Database TypeScript**: Migração completa do banco para TypeScript com connection pooling
+- **Sistema de Cache**: Implementado cache em memória com TTL e suporte a stale-while-revalidate
+- **Connection Pooling**: Otimização de conexões com MySQL com retry automático
+- **Health Checks**: Monitoramento de saúde do banco de dados
+
+### 🛡️ **Type Safety e Validação**
+- **Tipos Completos**: Sistema completo de tipos TypeScript para todas as entidades
+- **Validação de Esquemas**: Integração com Zod para validação robusta de APIs
+- **Middleware de Autenticação**: Sistema centralizado de autenticação e autorização
+- **Tratamento de Erros**: Sistema robusto de logging e tratamento de erros
+
+### ⚡ **Performance e UX**
+- **Hooks Otimizados**: useDebounce, useThrottle para melhor performance
+- **Componentes Melhorados**: Button e Input com estados de loading e validação
+- **API Optimizada**: Sistema de retry, rate limiting e cache de respostas
+- **Formatação de Dados**: Utilitários completos para formatação e validação
+
+### 🎨 **Funcionalidades Avançadas**
+- **📅 Sistema de Calendário**: Gestão completa de agendamentos com visualização mensal
+- **📊 Dashboard Analytics**: Métricas detalhadas para profissionais (ganhos, serviços, ratings)
+- **🔄 Gerenciamento de Estado**: Hooks personalizados para operações assíncronas
+- **📱 Responsividade**: Interface otimizada para todos os dispositivos
 
 ## Resumo Técnico
 - **Frontend**: Next.js 16 (React) com Tailwind CSS
 - **Backend**: Next.js API Routes
-- **Database**: MySQL 8.0 (Docker)
-- **Auth**: NextAuth + JWT personalizado
-- **Scripts**: Seed de dados, testes de fumaça
+- **Database**: MySQL 8.0 (Docker) com connection pooling e health checks
+- **Auth**: NextAuth + JWT personalizado com middleware de validação
+- **Scripts**: Seed de dados, testes de fumaça, migrações automáticas
+- **Arquitetura**: TypeScript com tipagem completa, sistema de cache, validação de esquemas
 
 Pré-requisitos
 - Node.js >= 18
@@ -186,6 +215,10 @@ Após login, o frontend direciona o usuário ao dashboard correto baseado em seu
 ### Gerais
 - `GET /api/notifications` — Notificações do usuário
 - `GET /api/messages/[requestId]` — Chat entre cliente e profissional
+- `GET /api/appointments` — Lista agendamentos do usuário
+- `POST /api/appointments` — Criar novo agendamento
+- `PATCH /api/appointments/[id]` — Atualizar status do agendamento
+- `GET /api/analytics` — Métricas e relatórios (profissionais)
 
 Autenticação nas chamadas API (frontend)
 - Envie header: `Authorization: Bearer <token>` (token obtido no login). Algumas rotas NextAuth também usam cookies quando o frontend integra NextAuth diretamente.
@@ -211,6 +244,9 @@ Autenticação nas chamadas API (frontend)
 - ✅ **Rotas 404**: Todas as rotas principais funcionando corretamente
 - ✅ **Erros de Compilação**: Componente Button e tipos corrigidos
 - ✅ **Erro 401 Unauthorized**: Corrigido problema de autenticação na API de requests
+- ✅ **Async Params**: Compatibilidade com Next.js 15+ em rotas dinâmicas
+- ✅ **TypeScript Errors**: Todos os erros de tipo resolvidos
+- ✅ **Database Pooling**: Conexões otimizadas com retry automático
 
 ### Soluções Rápidas
 - **Erro de permissão DB ao rodar seed**: Confira `DB_USER` / `DB_PASSWORD` em `.env.local` e as credenciais do container
