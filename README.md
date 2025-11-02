@@ -510,3 +510,18 @@ Se precisar sobrescrever temporariamente, execute um commit com `--no-verify` (n
 ```powershell
 git commit -m "mensagem" --no-verify
 ```
+
+## Atualizações Recentes
+
+### Correções de Autenticação
+- Substituído o uso de `useSession` por `useAuth` na página de avaliações para alinhar com o sistema de autenticação baseado em tokens.
+- Adicionado suporte ao `localStorage` para autenticação de usuários.
+
+### Melhorias na API de Avaliações
+- Atualizado o método de autenticação para usar `getUserFromRequest`.
+- Corrigido problema de inserção na tabela `reviews` para incluir `provider_id` e `client_id` obrigatórios.
+- Adicionado tratamento de erros mais robusto para respostas HTTP.
+
+### Testes e Validação
+- Testes realizados para garantir que a página de avaliações e a API funcionam corretamente com as novas mudanças.
+- Verificado o fluxo de login e acesso restrito para usuários não autenticados.
