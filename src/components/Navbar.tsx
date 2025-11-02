@@ -40,6 +40,12 @@ export default function Navbar() {
                 >
                   Calendário
                 </Link>
+                <Link
+                  href="/reviews"
+                  className={`hover:text-[var(--secondary-1)] ${pathname === '/reviews' ? 'font-medium' : ''}`}
+                >
+                  Avaliações
+                </Link>
                 {user?.role === 'provider' && (
                   <Link
                     href="/analytics"

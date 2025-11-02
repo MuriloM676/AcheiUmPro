@@ -45,7 +45,7 @@ export async function PATCH(
       const clientId = rows[0].client_id;
       if (clientId !== user.id) return NextResponse.json({ error: 'Not allowed' }, { status: 403 });
 
-      await pool.query<ResultSetHeader>(`UPDATE service_requests SET status = ? WHERE id = ?`, [status, requestId]);
+      await pool.query<ResultSetHeader>(`UPDATE service_requests SET status = ?, completed_at = NOW() WHERE id = ?`, [status, requestId]);
 
       // mark related appointment as completed if exists
       await pool.query(`UPDATE appointments SET status = 'completed' WHERE request_id = ?`, [requestId]);
@@ -74,14 +74,28 @@ export async function PATCH(
     }
 
     // Update request only if it belongs to this provider when providerId is set
+    const updateFields = ['status = ?'];
+    const updateValues = [status];
+
+    if (scheduled_at) {
+      updateFields.push('scheduled_at = ?');
+      updateValues.push(scheduled_at);
+    }
+
+    if (status === 'completed') {
+      updateFields.push('completed_at = NOW()');
+    }
+
+    updateValues.push(requestId);
+    if (providerId) {
+      updateValues.push(providerId);
+    }
+
     const [result] = await pool.query<ResultSetHeader>(
       `UPDATE service_requests
-          SET status = ?,
-              scheduled_at = COALESCE(?, scheduled_at)
+          SET ${updateFields.join(', ')}
         WHERE id = ? ${providerId ? 'AND provider_id = ?' : ''}`,
-      providerId
-        ? [status, scheduled_at || null, requestId, providerId]
-        : [status, scheduled_at || null, requestId]
+      updateValues
     );
 
     if (result.affectedRows === 0) {

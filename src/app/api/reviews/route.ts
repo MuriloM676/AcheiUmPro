@@ -1,143 +1,266 @@
-import { NextRequest, NextResponse } from 'next/server'
-import pool from '@/lib/db'
-import { getUserFromToken } from '@/lib/auth'
-import { RowDataPacket, ResultSetHeader } from 'mysql2'
-import { z } from 'zod'
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import pool from '@/lib/db';
+import { RowDataPacket, ResultSetHeader } from 'mysql2';
 
-export const runtime = 'nodejs'
-
-interface ReviewRow extends RowDataPacket {
-  id: number
-  provider_id: number
-  client_id: number
-  rating: number
-  comment: string | null
-  created_at: string
-  client_name: string
+interface ReviewData {
+  request_id: number;
+  reviewed_id: number;
+  rating: number;
+  comment?: string;
+  review_type: 'client_to_provider' | 'provider_to_client';
 }
 
-const createReviewSchema = z.object({
-  providerId: z.number().int().positive(),
-  rating: z.number().int().min(1).max(5),
-  comment: z.string().max(1000).optional().nullable()
-})
+interface ReviewRow extends RowDataPacket {
+  id: number;
+  request_id: number;
+  reviewer_id: number;
+  reviewed_id: number;
+  rating: number;
+  comment: string;
+  review_type: 'client_to_provider' | 'provider_to_client';
+  created_at: string;
+  updated_at: string;
+  reviewer_name: string;
+  reviewed_name: string;
+  service_title: string;
+}
 
+// GET - Buscar avaliações
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams
-    const providerIdParam = searchParams.get('providerId')
-
-    if (!providerIdParam) {
-      return NextResponse.json({ error: 'providerId is required' }, { status: 400 })
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    const providerId = Number(providerIdParam)
-    if (Number.isNaN(providerId) || providerId <= 0) {
-      return NextResponse.json({ error: 'Invalid providerId' }, { status: 400 })
-    }
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('user_id');
+    const requestId = searchParams.get('request_id');
+    const type = searchParams.get('type') as 'received' | 'given' | null;
 
-    const clientIdParam = searchParams.get('clientId')
-    const params: any[] = [providerId]
     let query = `
-      SELECT r.id, r.provider_id, r.client_id, r.rating, r.comment, r.created_at,
-             u.name AS client_name
+      SELECT r.*, 
+             reviewer.name as reviewer_name,
+             reviewed.name as reviewed_name,
+             sr.title as service_title
       FROM reviews r
-      JOIN users u ON u.id = r.client_id
-      WHERE r.provider_id = ?
-    `
+      JOIN users reviewer ON r.reviewer_id = reviewer.id
+      JOIN users reviewed ON r.reviewed_id = reviewed.id
+      JOIN service_requests sr ON r.request_id = sr.id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
 
-    if (clientIdParam) {
-      const clientId = Number(clientIdParam)
-      if (!Number.isNaN(clientId) && clientId > 0) {
-        query += ' AND r.client_id = ?'
-        params.push(clientId)
+    if (userId) {
+      if (type === 'received') {
+        query += ' AND r.reviewed_id = ?';
+      } else if (type === 'given') {
+        query += ' AND r.reviewer_id = ?';
+      } else {
+        query += ' AND (r.reviewer_id = ? OR r.reviewed_id = ?)';
+        params.push(userId);
       }
+      params.push(userId);
     }
 
-    query += ' ORDER BY r.created_at DESC'
+    if (requestId) {
+      query += ' AND r.request_id = ?';
+      params.push(requestId);
+    }
 
-    const [rows] = await pool.query<ReviewRow[]>(query, params)
+    query += ' ORDER BY r.created_at DESC';
 
-    return NextResponse.json({ reviews: rows })
+    const [rows] = await pool.execute<ReviewRow[]>(query, params);
+
+    return NextResponse.json({ reviews: rows });
+
   } catch (error) {
-    console.error('Error fetching reviews:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('Erro ao buscar avaliações:', error);
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
 
+// POST - Criar nova avaliação
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization') || ''
-    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
-
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    const user = await getUserFromToken(token)
-    if (!user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    const userId = parseInt(session.user.id);
+    const body: ReviewData = await request.json();
+
+    const { request_id, reviewed_id, rating, comment, review_type } = body;
+
+    // Validações
+    if (!request_id || !reviewed_id || !rating || !review_type) {
+      return NextResponse.json({ error: 'Dados obrigatórios não fornecidos' }, { status: 400 });
     }
 
-    if (user.role !== 'client') {
-      return NextResponse.json({ error: 'Only clients can create reviews' }, { status: 403 })
+    if (rating < 1 || rating > 5) {
+      return NextResponse.json({ error: 'Avaliação deve ser entre 1 e 5' }, { status: 400 });
     }
 
-    const body = await request.json()
-    const parsed = createReviewSchema.safeParse({
-      providerId: body.provider_id ?? body.providerId,
-      rating: body.rating,
-      comment: body.comment ?? null
-    })
-
-    if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
+    if (userId === reviewed_id) {
+      return NextResponse.json({ error: 'Não é possível avaliar a si mesmo' }, { status: 400 });
     }
 
-    const { providerId, rating, comment } = parsed.data
+    // Verificar se o serviço está concluído
+    const [requestRows] = await pool.execute<RowDataPacket[]>(
+      'SELECT status, client_id FROM service_requests WHERE id = ?',
+      [request_id]
+    );
 
-    // Ensure the client has at least one completed request with this provider
-    const [completedRequests] = await pool.query<RowDataPacket[]>(
-      `SELECT id FROM requests
-       WHERE client_id = ? AND provider_id = ? AND status = 'completed'
-       LIMIT 1`,
-      [user.id, providerId]
-    )
-
-    if (!completedRequests.length) {
-      return NextResponse.json({
-        error: 'Você só pode avaliar prestadores após concluir um serviço'
-      }, { status: 403 })
+    if (requestRows.length === 0) {
+      return NextResponse.json({ error: 'Solicitação de serviço não encontrada' }, { status: 404 });
     }
 
-    // Check if review already exists for this client/provider pair
-    const [existingReviews] = await pool.query<RowDataPacket[]>(
-      'SELECT id FROM reviews WHERE provider_id = ? AND client_id = ? LIMIT 1',
-      [providerId, user.id]
-    )
-
-    if (existingReviews.length) {
-      const reviewId = existingReviews[0].id
-
-      await pool.query<ResultSetHeader>(
-        'UPDATE reviews SET rating = ?, comment = ?, created_at = CURRENT_TIMESTAMP WHERE id = ?',
-        [rating, comment ?? null, reviewId]
-      )
-
-      return NextResponse.json({ message: 'Avaliação atualizada com sucesso' })
+    const serviceRequest = requestRows[0];
+    if (serviceRequest.status !== 'completed') {
+      return NextResponse.json({ error: 'Só é possível avaliar serviços concluídos' }, { status: 400 });
     }
 
-    const [result] = await pool.query<ResultSetHeader>(
-      'INSERT INTO reviews (provider_id, client_id, rating, comment) VALUES (?, ?, ?, ?)',
-      [providerId, user.id, rating, comment ?? null]
-    )
+    // Verificar se o usuário tem permissão para fazer esta avaliação
+    let isAuthorized = false;
+    if (review_type === 'client_to_provider' && userId === serviceRequest.client_id) {
+      isAuthorized = true;
+    } else if (review_type === 'provider_to_client') {
+      // Verificar se o usuário é o provedor aceito para este serviço
+      const [proposalRows] = await pool.execute<RowDataPacket[]>(
+        'SELECT provider_id FROM service_proposals WHERE request_id = ? AND status = "accepted"',
+        [request_id]
+      );
+      if (proposalRows.length > 0 && userId === proposalRows[0].provider_id) {
+        isAuthorized = true;
+      }
+    }
+
+    if (!isAuthorized) {
+      return NextResponse.json({ error: 'Você não tem permissão para fazer esta avaliação' }, { status: 403 });
+    }
+
+    // Verificar se já existe uma avaliação deste tipo
+    const [existingReviews] = await pool.execute<RowDataPacket[]>(
+      'SELECT id FROM reviews WHERE request_id = ? AND reviewer_id = ? AND review_type = ?',
+      [request_id, userId, review_type]
+    );
+
+    if (existingReviews.length > 0) {
+      return NextResponse.json({ error: 'Você já avaliou este serviço' }, { status: 400 });
+    }
+
+    // Criar a avaliação
+    const [result] = await pool.execute<ResultSetHeader>(
+      `INSERT INTO reviews (request_id, reviewer_id, reviewed_id, rating, comment, review_type)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [request_id, userId, reviewed_id, rating, comment || null, review_type]
+    );
+
+    // Buscar a avaliação criada com dados completos
+    const [newReview] = await pool.execute<ReviewRow[]>(
+      `SELECT r.*, 
+              reviewer.name as reviewer_name,
+              reviewed.name as reviewed_name,
+              sr.title as service_title
+       FROM reviews r
+       JOIN users reviewer ON r.reviewer_id = reviewer.id
+       JOIN users reviewed ON r.reviewed_id = reviewed.id
+       JOIN service_requests sr ON r.request_id = sr.id
+       WHERE r.id = ?`,
+      [result.insertId]
+    );
 
     return NextResponse.json({
       message: 'Avaliação criada com sucesso',
-      reviewId: result.insertId
-    }, { status: 201 })
+      review: newReview[0]
+    }, { status: 201 });
+
   } catch (error) {
-    console.error('Error creating review:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('Erro ao criar avaliação:', error);
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
+  }
+}
+
+// PUT - Atualizar avaliação
+export async function PUT(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+
+    const userId = parseInt(session.user.id);
+    const body = await request.json();
+    const { review_id, rating, comment } = body;
+
+    if (!review_id || !rating) {
+      return NextResponse.json({ error: 'ID da avaliação e nota são obrigatórios' }, { status: 400 });
+    }
+
+    if (rating < 1 || rating > 5) {
+      return NextResponse.json({ error: 'Avaliação deve ser entre 1 e 5' }, { status: 400 });
+    }
+
+    // Verificar se a avaliação existe e pertence ao usuário
+    const [reviewRows] = await pool.execute<RowDataPacket[]>(
+      'SELECT id FROM reviews WHERE id = ? AND reviewer_id = ?',
+      [review_id, userId]
+    );
+
+    if (reviewRows.length === 0) {
+      return NextResponse.json({ error: 'Avaliação não encontrada ou sem permissão' }, { status: 404 });
+    }
+
+    // Atualizar a avaliação
+    await pool.execute(
+      'UPDATE reviews SET rating = ?, comment = ?, updated_at = NOW() WHERE id = ?',
+      [rating, comment || null, review_id]
+    );
+
+    return NextResponse.json({ message: 'Avaliação atualizada com sucesso' });
+
+  } catch (error) {
+    console.error('Erro ao atualizar avaliação:', error);
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
+  }
+}
+
+// DELETE - Remover avaliação
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+
+    const userId = parseInt(session.user.id);
+    const { searchParams } = new URL(request.url);
+    const reviewId = searchParams.get('review_id');
+
+    if (!reviewId) {
+      return NextResponse.json({ error: 'ID da avaliação é obrigatório' }, { status: 400 });
+    }
+
+    // Verificar se a avaliação existe e pertence ao usuário
+    const [reviewRows] = await pool.execute<RowDataPacket[]>(
+      'SELECT id FROM reviews WHERE id = ? AND reviewer_id = ?',
+      [reviewId, userId]
+    );
+
+    if (reviewRows.length === 0) {
+      return NextResponse.json({ error: 'Avaliação não encontrada ou sem permissão' }, { status: 404 });
+    }
+
+    // Remover a avaliação
+    await pool.execute('DELETE FROM reviews WHERE id = ?', [reviewId]);
+
+    return NextResponse.json({ message: 'Avaliação removida com sucesso' });
+
+  } catch (error) {
+    console.error('Erro ao remover avaliação:', error);
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
