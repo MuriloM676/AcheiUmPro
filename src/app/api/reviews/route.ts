@@ -151,11 +151,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Você já avaliou este serviço' }, { status: 400 });
     }
 
+    // Buscar dados necessários para as colunas obrigatórias
+    let providerId = null;
+    let clientId = serviceRequest.client_id;
+
+    if (review_type === 'client_to_provider') {
+      // Buscar o provider_id da proposta aceita
+      const [proposalRows] = await pool.execute<RowDataPacket[]>(
+        'SELECT provider_id FROM service_proposals WHERE request_id = ? AND status = "accepted"',
+        [request_id]
+      );
+      if (proposalRows.length > 0) {
+        providerId = proposalRows[0].provider_id;
+      }
+    } else {
+      // Para provider_to_client, buscar o provider_id do usuário atual
+      const [providerRows] = await pool.execute<RowDataPacket[]>(
+        'SELECT id FROM providers WHERE user_id = ?',
+        [userId]
+      );
+      if (providerRows.length > 0) {
+        providerId = providerRows[0].id;
+      }
+    }
+
     // Criar a avaliação
     const [result] = await pool.execute<ResultSetHeader>(
-      `INSERT INTO reviews (request_id, reviewer_id, reviewed_id, rating, comment, review_type)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [request_id, userId, reviewed_id, rating, comment || null, review_type]
+      `INSERT INTO reviews (request_id, reviewer_id, reviewed_id, provider_id, client_id, rating, comment, review_type)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [request_id, userId, reviewed_id, providerId, clientId, rating, comment || null, review_type]
     );
 
     // Buscar a avaliação criada com dados completos
