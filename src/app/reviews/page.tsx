@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/hooks/useAuth';
 import RatingStars from '@/components/RatingStars';
 import ReviewForm from '@/components/ReviewForm';
 
@@ -35,26 +35,26 @@ interface CompletedService {
 }
 
 export default function ReviewsPage() {
-  const { data: session } = useSession();
+  const { user, isLoading } = useAuth({ requireAuth: true });
   const [reviews, setReviews] = useState<Review[]>([]);
   const [completedServices, setCompletedServices] = useState<CompletedService[]>([]);
   const [activeTab, setActiveTab] = useState<'received' | 'given' | 'pending'>('received');
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [selectedService, setSelectedService] = useState<CompletedService | null>(null);
   const [reviewType, setReviewType] = useState<'client_to_provider' | 'provider_to_client'>('client_to_provider');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (session?.user?.id) {
+    if (user?.id) {
       fetchReviews();
       fetchCompletedServices();
     }
-  }, [session, activeTab]);
+  }, [user, activeTab]);
 
   const fetchReviews = async () => {
     try {
-      const response = await fetch(`/api/reviews?user_id=${session?.user?.id}&type=${activeTab}`);
+      const response = await fetch(`/api/reviews?user_id=${user?.id}&type=${activeTab}`);
       const data = await response.json();
       setReviews(data.reviews || []);
     } catch (error) {
@@ -64,8 +64,8 @@ export default function ReviewsPage() {
 
   const fetchCompletedServices = async () => {
     try {
-      setIsLoading(true);
-      const response = await fetch(`/api/requests?status=completed&user_id=${session?.user?.id}`);
+      setIsLoadingData(true);
+      const response = await fetch(`/api/requests?status=completed&user_id=${user?.id}`);
       const data = await response.json();
 
       // Processar serviços para verificar quais podem ser avaliados
@@ -77,9 +77,9 @@ export default function ReviewsPage() {
 
           return {
             ...service,
-            can_review_provider: session?.user?.id === service.client_id &&
+            can_review_provider: user?.id === service.client_id &&
               !serviceReviews.some((r: Review) => r.review_type === 'client_to_provider'),
-            can_review_client: session?.user?.id === service.provider_id &&
+            can_review_client: user?.id === service.provider_id &&
               !serviceReviews.some((r: Review) => r.review_type === 'provider_to_client'),
             provider_review: serviceReviews.find((r: Review) => r.review_type === 'client_to_provider'),
             client_review: serviceReviews.find((r: Review) => r.review_type === 'provider_to_client')
@@ -91,7 +91,7 @@ export default function ReviewsPage() {
     } catch (error) {
       console.error('Erro ao buscar serviços concluídos:', error);
     } finally {
-      setIsLoading(false);
+      setIsLoadingData(false);
     }
   };
 
@@ -150,7 +150,18 @@ export default function ReviewsPage() {
     });
   };
 
-  if (!session) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -206,7 +217,7 @@ export default function ReviewsPage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
               Serviços Concluídos - Aguardando Avaliação
             </h2>
-            {isLoading ? (
+            {isLoadingData ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
                 <p className="mt-2 text-gray-600">Carregando...</p>

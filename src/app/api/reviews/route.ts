@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getUserFromRequest } from '@/lib/auth';
 import pool from '@/lib/db';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 
@@ -30,8 +29,8 @@ interface ReviewRow extends RowDataPacket {
 // GET - Buscar avaliações
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const user = await getUserFromRequest(request);
+    if (!user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
@@ -85,12 +84,12 @@ export async function GET(request: NextRequest) {
 // POST - Criar nova avaliação
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const user = await getUserFromRequest(request);
+    if (!user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    const userId = parseInt(session.user.id);
+    const userId = user.id;
     const body: ReviewData = await request.json();
 
     const { request_id, reviewed_id, rating, comment, review_type } = body;
@@ -187,12 +186,12 @@ export async function POST(request: NextRequest) {
 // PUT - Atualizar avaliação
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const user = await getUserFromRequest(request);
+    if (!user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    const userId = parseInt(session.user.id);
+    const userId = user.id;
     const body = await request.json();
     const { review_id, rating, comment } = body;
 
@@ -231,12 +230,12 @@ export async function PUT(request: NextRequest) {
 // DELETE - Remover avaliação
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const user = await getUserFromRequest(request);
+    if (!user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    const userId = parseInt(session.user.id);
+    const userId = user.id;
     const { searchParams } = new URL(request.url);
     const reviewId = searchParams.get('review_id');
 
